@@ -206,45 +206,6 @@ int main(int argc, const char * argv[]) {
     cout<<"test lecture US"<<endl;
     cout<<"dimensions US : "<<image_US->GetLargestPossibleRegion().GetSize()<<endl;
     
-    /*******************
-     * DOWNSAMPLING US
-     ******************/
-    //RESOLUTION ADAPTATION US
-    ShrinkFilterType::Pointer shrinkFilter = ShrinkFilterType::New();
-    shrinkFilter->SetInput(image_US);
-    //porc 6 : 3,3,2/ porc 1 5,4,3
-    shrinkFilter->SetShrinkFactor(0, 3);
-    shrinkFilter->SetShrinkFactor(1, 3);
-    shrinkFilter->SetShrinkFactor(2, 2);
-    try {
-        shrinkFilter->Update();
-    } catch (itk::ExceptionObject &e) {
-        cerr<<"error while downsampling US image"<<endl;
-        cerr<<e<<endl;
-        return EXIT_FAILURE;
-    }
-    
-    ImageType::Pointer US_shrunk = shrinkFilter->GetOutput();
-    
-    //verification ecriture de l'image
-        WriterType::Pointer writer6 = WriterType::New();
-        string out6 = "/Users/maximegerard/Documents/ShrunkUS.nii.gz";
-      itk::NiftiImageIO::Pointer io = itk::NiftiImageIO::New();
-        writer6->SetImageIO(io);
-        writer6->SetInput(US_shrunk);
-        writer6->SetFileName(out6);
-        try {
-            writer6->Update();
-        } catch (itk::ExceptionObject &e) {
-            cerr<<"error while writing rescaled image"<<endl;
-            cerr<<e<<endl;
-            return EXIT_FAILURE;
-        }
-    
-    cout<<"done writing shrunk US"<<endl;
-    
-    
-    
     
 //    //min max image US
 //    MinMaxCalculatorType::Pointer minMaxUS = MinMaxCalculatorType::New();
@@ -258,7 +219,7 @@ int main(int argc, const char * argv[]) {
      *********************/
     
     ReaderType::Pointer reader2 = ReaderType::New();
-    //itk::NiftiImageIO::Pointer io = itk::NiftiImageIO::New();
+    itk::NiftiImageIO::Pointer io = itk::NiftiImageIO::New();
     reader2->SetImageIO(io);
     reader2->SetFileName(filenameIRM);
     try {
@@ -281,6 +242,54 @@ int main(int argc, const char * argv[]) {
 //    cout<<"initial intensity range IRM image : "<<"[ "<<minMaxIRM->GetMinimum()<<","<<minMaxIRM->GetMaximum()<<" ]"<<endl;
     
     cout<<"done reading images"<<endl;
+    
+    /*******************
+     * DOWNSAMPLING US
+     ******************/
+    //RESOLUTION ADAPTATION US
+    ShrinkFilterType::Pointer shrinkFilter = ShrinkFilterType::New();
+    shrinkFilter->SetInput(image_US);
+    
+    //recuperation des spacing des deux images pour savoir quel facteur utiliser
+    ImageType::SpacingType spacingUS = image_US->GetSpacing();
+    ImageType::SpacingType spacingIRM = image_IRM->GetSpacing();
+    //calcul du spacing factor
+    int shrinkX = int(2*spacingIRM[0]/spacingUS[0]);
+    int shrinkY = int(2*spacingIRM[1]/spacingUS[1]);
+    int shrinkZ = int(2*spacingIRM[2]/spacingUS[2]);
+    
+    cout<<"shrinking factors : "<<shrinkX<<", "<<shrinkY<<", "<<shrinkZ<<endl;
+
+    //porc 6 : (3,3,2)/ porc 1 (5,4,3)
+    shrinkFilter->SetShrinkFactor(0, shrinkX);
+    shrinkFilter->SetShrinkFactor(1, shrinkY);
+    shrinkFilter->SetShrinkFactor(2, shrinkZ);
+    try {
+        shrinkFilter->Update();
+    } catch (itk::ExceptionObject &e) {
+        cerr<<"error while downsampling US image"<<endl;
+        cerr<<e<<endl;
+        return EXIT_FAILURE;
+    }
+    
+    ImageType::Pointer US_shrunk = shrinkFilter->GetOutput();
+    
+    //    //verification ecriture de l'image
+    //        WriterType::Pointer writer6 = WriterType::New();
+    //        string out6 = "/Users/maximegerard/Documents/ShrunkUS.nii.gz";
+    //      itk::NiftiImageIO::Pointer io = itk::NiftiImageIO::New();
+    //        writer6->SetImageIO(io);
+    //        writer6->SetInput(US_shrunk);
+    //        writer6->SetFileName(out6);
+    //        try {
+    //            writer6->Update();
+    //        } catch (itk::ExceptionObject &e) {
+    //            cerr<<"error while writing rescaled image"<<endl;
+    //            cerr<<e<<endl;
+    //            return EXIT_FAILURE;
+    //        }
+    
+    cout<<"done writing shrunk US"<<endl;
     
     /****************
     * RESCALING IRM
@@ -497,11 +506,11 @@ int main(int argc, const char * argv[]) {
     resampler->SetOutputDirection(rescaled_IRM->GetDirection());
     resampler->SetSize(rescaled_IRM->GetLargestPossibleRegion().GetSize());
     resampler->SetOutputSpacing(rescaled_IRM->GetSpacing());
-    ImageType::PointType origine = rescaled_IRM->GetOrigin();
-    origine[0] = origine[0] - TX;
-    origine[1] = origine[1] - TY;
-    origine[2] = origine[2] - TZ;
-    resampler->SetOutputOrigin(origine);
+//    ImageType::PointType origine = rescaled_IRM->GetOrigin();
+//    origine[0] = origine[0] - TX;
+//    origine[1] = origine[1] - TY;
+//    origine[2] = origine[2] - TZ;
+    resampler->SetOutputOrigin(finalTsl->GetInverseTransform()->TransformPoint(rescaled_IRM->GetOrigin()));
     resampler->SetDefaultPixelValue(0);
     
     ImageType::Pointer outputImage = ImageType::New();
@@ -523,18 +532,14 @@ int main(int argc, const char * argv[]) {
     
     
     
-    
-    //TEST METRIC LC2
-   // cout<<"test metric"<<endl;
+////    
+//    //TEST METRIC LC2
+//   // cout<<"test metric"<<endl;
+//    LC2MetricType::Pointer metric = LC2MetricType::New();
 //    metric->SetFixed(US_shrunk);
 //    metric->ComputeMask();
-////    metric->SetMoving(rescaled_IRM);
-////    metric->test();
 //    
-//
-//    
-//    
-//    //TEST FORCE BRUTE
+////TEST FORCE BRUTE
 //    cout<<"test force brute"<<endl;
 //    ResampleFilterType::Pointer resamplefilter = ResampleFilterType::New();
 //    resamplefilter->SetInput(rescaled_IRM);
@@ -542,36 +547,27 @@ int main(int argc, const char * argv[]) {
 //    resamplefilter->SetSize(rescaled_IRM->GetLargestPossibleRegion().GetSize());
 //    resamplefilter->SetOutputDirection(rescaled_IRM->GetDirection());
 //    ImageType::PointType origine = rescaled_IRM->GetOrigin();
-//    ImageType::Pointer transformed_IRM;
-//    ImageType::Pointer final_MRI = ImageType::New();
-//    cout<<"origine before"<<origine<<endl;
-//    double max =0;
 //    
-//    cout<<"test verification"<<endl;
-//    TranslationType::OutputVectorType best_tsl;
+//    TranslationType::Pointer trsl = TranslationType::New();
+//    //TranslationType::OutputVectorType slide;
+//    TranslationType::ParametersType slide= trsl->GetParameters();
+//    slide[0]=0;
+//    slide[1]=10;
+//    slide[2]=0;
+//    //trsl->Translate(slide);
+//    trsl->SetParameters(slide);
 //    
-//
-//    for(double i=-7;i<8;i++)
-//    {
-//        TranslationType::Pointer tsf = TranslationType::New();
-//        TranslationType::OutputVectorType tsl;
-// 
-//        
-//        tsl[0]=i;
-//        tsl[1]=0;
-//        tsl[2]=0;
-//        cout<<"tsl value : "<<tsl<<endl;
-//        
-//        tsf->Translate(tsl);
-//        resamplefilter->SetTransform(tsf);
-//        origine = rescaled_IRM->GetOrigin();
-//        cout<<"origine before : "<<origine<<endl;
-//        origine[0] = origine[0]-tsl[0];
-//        origine[1] = origine[1]-tsl[1];
-//        origine[2] = origine[2]-tsl[2];
-//        cout<<"origine after: "<<origine<<endl;
-//        resamplefilter->SetOutputOrigin(origine);
-//        try {
+//    resamplefilter->SetTransform(trsl->GetInverseTransform());
+////    origine[0] = origine[0] - slide[0];
+////    origine[1] = origine[1] - slide[1];
+////    origine[2] = origine[2] - slide[2];
+//    
+////    cout<<"test methode tsf point"<<endl;
+////    cout<<"origine tsf a l'ancienne : "<<origine<<endl;
+//    ImageType::PointType or2 = trsl->TransformPoint(rescaled_IRM->GetOrigin());
+//    cout<<"origine avec tsf point : "<<or2<<endl;
+//    resamplefilter->SetOutputOrigin(or2);
+//    try {
 //            resamplefilter->Update();
 //        } catch (itk::ExceptionObject &e) {
 //            cerr<<"error while translating image"<<endl;
@@ -580,61 +576,25 @@ int main(int argc, const char * argv[]) {
 //        }
 //        
 //        ImageType::Pointer result = resamplefilter->GetOutput();
-//        metric->SetMoving(result);
-//        double score = metric->test();
-//        if(score>max)
-//        {
-//            max=score;
-//            best_tsl=tsl;
-//            
-//        }
-//        
-//    }
+//        //metric->SetMoving(result);
+//        //metric->test();
 //    
-//    cout<<"best tsl : "<<best_tsl<<endl;
-//    
-//    TranslationType::Pointer final_tsf = TranslationType::New();
-//    final_tsf->Translate(best_tsl);
-//    resamplefilter->SetTransform(final_tsf);
-//    origine = rescaled_IRM->GetOrigin() - best_tsl;
-//    resamplefilter->SetOutputOrigin(origine);
-//    try {
-//        resamplefilter->Update();
-//    } catch (itk::ExceptionObject &e) {
-//        cerr<<"error while translating image"<<endl;
-//        cerr<<e<<endl;
-//        return EXIT_FAILURE;
-//    }
-//    
-//  final_MRI = resamplefilter->GetOutput();
-//    
-//    
-//
-//
-//    
-//    
-//        //write image result
-//        WriterType::Pointer writerfinal = WriterType::New();
-//        string outfinal ="/Users/maximegerard/Documents/finalIRM.nii.gz"  ;
-//        writerfinal->SetImageIO(io);
-//        writerfinal->SetFileName(outfinal);
-//        writerfinal->SetInput(final_MRI);
+//        WriterType::Pointer writer7 = WriterType::New();
+//        string out7 ="/Users/maximegerard/Documents/tslIRM.nii.gz";
+//        writer7->SetImageIO(io);
+//        writer7->SetInput(result);
+//        writer7->SetFileName(out7);
 //        try {
-//            writerfinal->Update();
+//            writer7->Update();
 //        } catch (itk::ExceptionObject &e) {
 //            cerr<<"error whilte writing registered image"<<endl;
 //            cerr<<e<<endl;
 //            return EXIT_FAILURE;
 //        }
 //    
-    cout<<"done writing translation image"<<endl;
+//    cout<<"done writing translation image"<<endl;
     
     
-    
-    
-    
-    
-
     
     std::cout << "Done running routine!\n";
   

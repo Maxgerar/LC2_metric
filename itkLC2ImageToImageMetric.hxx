@@ -116,20 +116,20 @@ template<typename TFixedImage, typename TMovingImage>
         
         //writing mask images
         
-        BinaryWriterType::Pointer writer3 = BinaryWriterType::New();
-        string out3 = "/Users/maximegerard/Documents/testmask.nii.gz";
-        itk::NiftiImageIO::Pointer io = itk::NiftiImageIO::New();
-        writer3->SetInput(m_mask);
-        writer3->SetImageIO(io);
-        writer3->SetFileName(out3);
-        try {
-            writer3->Update();
-        } catch (itk::ExceptionObject &e) {
-            cerr<<"error while writing image file"<<endl;
-            cerr<<e<<endl;
-            EXIT_FAILURE;
-        }
-        
+//        BinaryWriterType::Pointer writer3 = BinaryWriterType::New();
+//        string out3 = "/Users/maximegerard/Documents/testmask.nii.gz";
+//        itk::NiftiImageIO::Pointer io = itk::NiftiImageIO::New();
+//        writer3->SetInput(m_mask);
+//        writer3->SetImageIO(io);
+//        writer3->SetFileName(out3);
+//        try {
+//            writer3->Update();
+//        } catch (itk::ExceptionObject &e) {
+//            cerr<<"error while writing image file"<<endl;
+//            cerr<<e<<endl;
+//            EXIT_FAILURE;
+//        }
+//        
         cout<<"done writing final mask image"<<endl;
 
         
@@ -740,20 +740,24 @@ LC2ImageToImageMetric<TFixedImage, TMovingImage>
     //cout<<"test affichage param tsf : "<<parameters<<endl;
     TranslationTransformType::Pointer transform = TranslationTransformType::New();
     transform->SetParameters(parameters);
+    cout<<"tsf parameters : "<<parameters<<endl;
     
     typename ResamplerType::Pointer resamplefilter = ResamplerType::New();
     resamplefilter->SetInput(movingImage);
     resamplefilter->SetSize(movingImage->GetLargestPossibleRegion().GetSize());
     resamplefilter->SetOutputSpacing(movingImage->GetSpacing());
     resamplefilter->SetOutputDirection(movingImage->GetDirection());
+    //resamplefilter->SetTransform(transform->GetInverseTransform());
     resamplefilter->SetTransform(transform);
+
+    cout<<"origin de l'image mobile before tsf : "<<movingImage->GetOrigin()<<endl;
+    //typename TMovingImage::PointType origine = transform->TransformPoint(movingImage->GetOrigin());
+    typename TMovingImage::PointType origine = (transform->GetInverseTransform())->TransformPoint(movingImage->GetOrigin());
     
-    typename TMovingImage::PointType origine = movingImage->GetOrigin();
-    cout<<"origin de l'image mobile before tsf : "<<origine<<endl;
     
-    origine[0] = origine[0]-parameters[0];
-    origine[1] = origine[1]-parameters[1];
-    origine[2] = origine[2]-parameters[2];
+//    origine[0] = origine[0]-parameters[0];
+//    origine[1] = origine[1]-parameters[1];
+//    origine[2] = origine[2]-parameters[2];
     
     cout<<"origin after tsf : "<<origine<<endl;
     
