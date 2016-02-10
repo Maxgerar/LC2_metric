@@ -45,25 +45,118 @@ template <typename TFixedImage, typename TMovingImage>
 void LC2ImageToImageMetric<TFixedImage, TMovingImage>
 ::SetImages(typename TFixedImage::Pointer US, typename TMovingImage::Pointer IRM)
 {
-    this->m_MovingImage = IRM;
-    this->m_FixedImage = US;
+    this->m_MovingImage = US;
+    this->m_FixedImage = IRM;
     
 }
     
 
 template<typename TFixedImage, typename TMovingImage>
-    void LC2ImageToImageMetric<TFixedImage,TMovingImage>::SetFixed(typename TFixedImage::Pointer US)
+    void LC2ImageToImageMetric<TFixedImage,TMovingImage>::SetFixed(typename TFixedImage::Pointer IRM)
     {
-        this->m_FixedImage = US;
+        this->m_FixedImage = IRM;
        
     }
     
 template<typename TFixedImage, typename TMovingImage>
-    void LC2ImageToImageMetric<TFixedImage,TMovingImage>::SetMoving(typename TMovingImage::Pointer IRM)
+    void LC2ImageToImageMetric<TFixedImage,TMovingImage>::SetMoving(typename TMovingImage::Pointer US)
     {
-        this->m_MovingImage =IRM;
+        this->m_MovingImage =US;
     }
     
+
+/************************
+ * GRADIENT COMPUTATION
+ ************************/
+    
+    template<typename TFixedImage, typename TMovingImage>
+    void
+    LC2ImageToImageMetric<TFixedImage,TMovingImage>::ComputeGradImage()
+    {
+        cout<<"compute gradient image of fixed MRI image"<<endl;
+        
+        typename GradientFilterType::Pointer filterG = GradientFilterType::New();
+        filterG->SetInput(this->m_FixedImage);
+        try {
+            filterG->Update();
+        } catch (itk::ExceptionObject &e) {
+            cerr<<"error while computing gradient image"<<endl;
+            cerr<<e<<endl;
+            EXIT_FAILURE;
+        }
+        
+        m_grad = filterG->GetOutput();
+        
+        //write image for test
+        
+        //        typename WriterType::Pointer writer1 = WriterType::New();
+        //        string out1 = "/Users/maximegerard/Documents/testgrad.nii.gz";
+        //        NiftiImageIO::Pointer io = NiftiImageIO::New();
+        //        writer1->SetInput(image_grad);
+        //        writer1->SetImageIO(io);
+        //        writer1->SetFileName(out1);
+        //        try {
+        //            writer1->Update();
+        //        } catch (itk::ExceptionObject &e) {
+        //            cerr<<"error while writing image file"<<endl;
+        //            cerr<<e<<endl;
+        //            EXIT_FAILURE;
+        //        }
+        //
+        //        cout<<"done writing gradient image"<<endl;
+
+        
+    }
+    
+/************
+ * VESSELNESS
+ **************/
+    
+    template<typename TFixedImage, typename TMovingImage>
+    void
+    LC2ImageToImageMetric<TFixedImage,TMovingImage>::ComputeVesselnessImage()
+    {
+        cout<<"compute vesselness image of fixed MRI image"<<endl;
+        
+        typename MultiScaleEnhancementFilterType::Pointer multiScaleFilter = MultiScaleEnhancementFilterType::New();
+        multiScaleFilter->SetInput(this->m_FixedImage);
+        
+        typename VesselnessMeasureFilterType::Pointer vesselnessFilter = VesselnessMeasureFilterType::New();
+        vesselnessFilter->SetAlpha1(1.5);
+        vesselnessFilter->SetAlpha2(1.5);
+        
+        
+        multiScaleFilter->SetHessianToMeasureFilter(vesselnessFilter);
+        multiScaleFilter->SetSigmaMinimum(6.8);
+        multiScaleFilter->SetSigmaMaximum(8.0);
+        multiScaleFilter->SetNumberOfSigmaSteps(5);
+        try {
+            multiScaleFilter->Update();
+        } catch (itk::ExceptionObject & e) {
+            cerr<<"error while computing vesselness image"<<endl;
+            cerr<<e<<endl;
+        }
+        
+        m_vesselness = multiScaleFilter->GetOutput();
+        
+        //ecrire fichier pour verification
+        
+        typename WriterType::Pointer writer10 = WriterType::New();
+        itk::NiftiImageIO::Pointer io = itk::NiftiImageIO::New();
+        string out10 = "/Users/maximegerard/Documents/testVesselness.nii.gz";
+        writer10->SetImageIO(io);
+        writer10->SetInput(m_vesselness);
+        writer10->SetFileName(out10);
+        try {
+            writer10->Update();
+        } catch (itk::ExceptionObject &e) {
+            cerr<<"error while writing Vesselness image"<<endl;
+            cerr<<e<<endl;
+        }
+        
+        cout<<"done writing vesselness image"<<endl;
+        
+    }
     
 
 
@@ -78,7 +171,7 @@ template<typename TFixedImage, typename TMovingImage>
         //binarisation
         
         typename BinaryThresholdFilterType::Pointer thresholder = BinaryThresholdFilterType::New();
-        thresholder->SetInput(this->m_FixedImage);
+        thresholder->SetInput(this->m_MovingImage);
         thresholder->SetOutsideValue(255);
         thresholder->SetInsideValue(0);
         thresholder->SetLowerThreshold(0);
@@ -116,20 +209,20 @@ template<typename TFixedImage, typename TMovingImage>
         
         //writing mask images
         
-//        BinaryWriterType::Pointer writer3 = BinaryWriterType::New();
-//        string out3 = "/Users/maximegerard/Documents/testmask.nii.gz";
-//        itk::NiftiImageIO::Pointer io = itk::NiftiImageIO::New();
-//        writer3->SetInput(m_mask);
-//        writer3->SetImageIO(io);
-//        writer3->SetFileName(out3);
-//        try {
-//            writer3->Update();
-//        } catch (itk::ExceptionObject &e) {
-//            cerr<<"error while writing image file"<<endl;
-//            cerr<<e<<endl;
-//            EXIT_FAILURE;
-//        }
-//        
+        BinaryWriterType::Pointer writer3 = BinaryWriterType::New();
+        string out3 = "/Users/maximegerard/Documents/testmask.nii.gz";
+        itk::NiftiImageIO::Pointer io = itk::NiftiImageIO::New();
+        writer3->SetInput(m_mask);
+        writer3->SetImageIO(io);
+        writer3->SetFileName(out3);
+        try {
+            writer3->Update();
+        } catch (itk::ExceptionObject &e) {
+            cerr<<"error while writing image file"<<endl;
+            cerr<<e<<endl;
+            EXIT_FAILURE;
+        }
+//
         cout<<"done writing final mask image"<<endl;
 
         
@@ -141,13 +234,14 @@ template<typename TFixedImage, typename TMovingImage>
     
 template <typename TFixedImage, typename TMovingImage>
 double
-    LC2ImageToImageMetric<TFixedImage, TMovingImage>::test()
+    LC2ImageToImageMetric<TFixedImage, TMovingImage>::test(const TransformParametersType &parameters)
     {
         //resetting the varsum and lc2sum for new computation
         variancesum =0;
         lc2varsum = 0;
         
         //defining images
+        //image fixe = image IRM
         FixedImageConstPointer fixedImage = this->m_FixedImage;
         
         if( !fixedImage )
@@ -171,7 +265,7 @@ double
         cout<<"compute gradient of MRI image"<<endl;
         
         typename GradientFilterType::Pointer filterG = GradientFilterType::New();
-        filterG->SetInput(movingImage);
+        filterG->SetInput(fixedImage);
         try {
             filterG->Update();
         } catch (itk::ExceptionObject &e) {
@@ -182,8 +276,8 @@ double
         
         typename TMovingImage::Pointer image_grad = filterG->GetOutput();
         
-        //write image for test
-        
+//        //write image for test
+//        
 //        typename WriterType::Pointer writer1 = WriterType::New();
 //        string out1 = "/Users/maximegerard/Documents/testgrad.nii.gz";
 //        NiftiImageIO::Pointer io = NiftiImageIO::New();
@@ -197,199 +291,199 @@ double
 //            cerr<<e<<endl;
 //            EXIT_FAILURE;
 //        }
+
+        cout<<"done writing gradient image"<<endl;
+        
+//        ///////////////////////////////////////
+//        //CROPPING CONSIDERING MRI POSITION //
+//        //////////////////////////////////////
+//        
+//        
+//        //on s'interesse au voxel au milieu de chacun des face du volume MRI
+//        
+//        //get the limits of images in terms of indexes
+//        typename TMovingImage::SizeType sizeIRM = fixedImage->GetLargestPossibleRegion().GetSize();
+//        cout<<"size IRM : "<<sizeIRM<<endl;
+//        typename TFixedImage::SizeType sizeUS = movingImage->GetLargestPossibleRegion().GetSize();
+//        cout<<"size US : "<<sizeUS<<endl;
+//        
+//        typename TFixedImage::IndexType ind1;
+//        ind1[0] = 0;
+//        ind1[1] = sizeIRM[1]/2;
+//        ind1[2] = sizeIRM[2]/2;
+//        //cout<<"index IRM p1 : "<<ind1<<endl;
+//        typename TFixedImage::PointType p1;
+//        fixedImage->TransformIndexToPhysicalPoint(ind1,p1);
+//        //cout<<"position spatiale p1 : "<<p1<<endl;;
+//        //eq US
+//        typename TMovingImage::IndexType indUS1;
+//        int indUS_infX;
+//        if(movingImage->TransformPhysicalPointToIndex(p1,indUS1))
+//        {
+//            //cout<<"le point 1 est dans le volume US !"<<endl;
+//            //cout<<"indice US : "<<indUS1<<endl;
+//            indUS_infX = indUS1[0];
+//            
+//        }
+//        else
+//            indUS_infX = 0;
+//        
+//        typename TFixedImage::IndexType ind2;
+//        ind2[0] = sizeIRM[0]-1;
+//        ind2[1] = sizeIRM[1]/2;
+//        ind2[2] = sizeIRM[2]/2;
+//        //cout<<"indice irm p2 : "<<ind2<<endl;
+//        typename TFixedImage::PointType p2;
+//        fixedImage->TransformIndexToPhysicalPoint(ind2,p2);
+//        //cout<<"position spatiale p2 : "<<p2<<endl;
+//        //eq US
+//        typename TMovingImage::IndexType indUS2;
+//        int indUS_supX;
+//        if(movingImage->TransformPhysicalPointToIndex(p2,indUS2))
+//        {
+//            //cout<<"le point 2 est dans le volume US !"<<endl;
+//            //cout<<"indice US : "<<indUS2<<endl;
+//            indUS_supX = indUS2[0];
+//            
+//        }
+//        
+//        else
+//            indUS_supX = sizeUS[0]-1;
 //
-//        cout<<"done writing gradient image"<<endl;
-        
-        ///////////////////////////////////////
-        //CROPPING CONSIDERING MRI POSITION //
-        //////////////////////////////////////
-        
-        
-        //on s'interesse au voxel au milieu de chacun des face du volume MRI
-        
-        //get the limits of images in terms of indexes
-        typename TMovingImage::SizeType sizeIRM = movingImage->GetLargestPossibleRegion().GetSize();
-        cout<<"size IRM : "<<sizeIRM<<endl;
-        typename TFixedImage::SizeType sizeUS = fixedImage->GetLargestPossibleRegion().GetSize();
-        cout<<"size US : "<<sizeUS<<endl;
-        
-        typename TMovingImage::IndexType ind1;
-        ind1[0] = 0;
-        ind1[1] = sizeIRM[1]/2;
-        ind1[2] = sizeIRM[2]/2;
-        //cout<<"index IRM p1 : "<<ind1<<endl;
-        typename TMovingImage::PointType p1;
-        movingImage->TransformIndexToPhysicalPoint(ind1,p1);
-        //cout<<"position spatiale p1 : "<<p1<<endl;;
-        //eq US
-        typename TFixedImage::IndexType indUS1;
-        int indUS_infX;
-        if(fixedImage->TransformPhysicalPointToIndex(p1,indUS1))
-        {
-            //cout<<"le point 1 est dans le volume US !"<<endl;
-            //cout<<"indice US : "<<indUS1<<endl;
-            indUS_infX = indUS1[0];
-            
-        }
-        else
-            indUS_infX = 0;
-        
-        typename TMovingImage::IndexType ind2;
-        ind2[0] = sizeIRM[0]-1;
-        ind2[1] = sizeIRM[1]/2;
-        ind2[2] = sizeIRM[2]/2;
-        //cout<<"indice irm p2 : "<<ind2<<endl;
-        typename TMovingImage::PointType p2;
-        movingImage->TransformIndexToPhysicalPoint(ind2,p2);
-        //cout<<"position spatiale p2 : "<<p2<<endl;
-        //eq US
-        typename TFixedImage::IndexType indUS2;
-        int indUS_supX;
-        if(fixedImage->TransformPhysicalPointToIndex(p2,indUS2))
-        {
-            //cout<<"le point 2 est dans le volume US !"<<endl;
-            //cout<<"indice US : "<<indUS2<<endl;
-            indUS_supX = indUS2[0];
-            
-        }
-        
-        else
-            indUS_supX = sizeUS[0]-1;
-
-        
-        
-        typename TMovingImage::IndexType ind3;
-        ind3[0] = sizeIRM[0]/2;
-        ind3[1] = 0;
-        ind3[2] = sizeIRM[2]/2;
-        //cout<<"indice irm p3 : "<<ind3<<endl;
-        typename TMovingImage::PointType p3;
-        movingImage->TransformIndexToPhysicalPoint(ind3,p3);
-        //cout<<"position spatiale p3 : "<<p3<<endl;
-        //eq US
-        typename TFixedImage::IndexType indUS3;
-        int indUS_infY;
-        if(fixedImage->TransformPhysicalPointToIndex(p3,indUS3))
-        {
-            //cout<<"le point 3 est dans le volume US !"<<endl;
-            //cout<<"indice us : "<<indUS3<<endl;
-            indUS_infY = indUS3[2];
-            
-        }
-        else
-            indUS_infY = 0;
-        
-        typename TMovingImage::IndexType ind4;
-        ind4[0] = sizeIRM[0]/2;
-        ind4[1] = sizeIRM[1]-1;
-        ind4[2] = sizeIRM[2]/2;
-        //cout<<"indice irm p4 : "<<ind4<<endl;
-        typename TMovingImage::PointType p4;
-        movingImage->TransformIndexToPhysicalPoint(ind4,p4);
-        //cout<<"position spatiale p4 : "<<p4<<endl;
-        //eq US
-        typename TFixedImage::IndexType indUS4;
-        int indUS_supY;
-        if(fixedImage->TransformPhysicalPointToIndex(p4,indUS4))
-        {
-            //cout<<"le point 4 est dans le volume US !"<<endl;
-            //cout<<"indice us : "<<indUS4<<endl;
-            indUS_supY = indUS4[2];
-            
-        }
-        else
-            indUS_supY = sizeUS[2]-1;
-        
-        typename TMovingImage::IndexType ind5;
-        ind5[0] = sizeIRM[0]/2;
-        ind5[1] = sizeIRM[1]/2;
-        ind5[2] = 0;
-        //cout<<"indice irm p5 : "<<ind5<<endl;
-        typename TMovingImage::PointType p5;
-        movingImage->TransformIndexToPhysicalPoint(ind5,p5);
-        //cout<<"position spatiale p5 : "<<p5<<endl;
-        //eq US
-        typename TFixedImage::IndexType indUS5;
-        int indUS_infZ;
-        if(fixedImage->TransformPhysicalPointToIndex(p5,indUS5))
-        {
-            //cout<<"le point 5 est dans le volume US !"<<endl;
-            //cout<<"indice us : "<<indUS5<<endl;
-            indUS_infZ = indUS5[1];
-            
-        }
-        else
-            indUS_infZ = 0;
-        
-        typename TMovingImage::IndexType ind6;
-        ind6[0] = sizeIRM[0]/2;
-        ind6[1] = sizeIRM[1]/2;
-        ind6[2] = sizeIRM[2]-1;
-        //cout<<"indice irm p6 : "<<ind6<<endl;
-        typename TMovingImage::PointType p6;
-        movingImage->TransformIndexToPhysicalPoint(ind6,p6);
-        //cout<<"position spatiale p6 : "<<p6<<endl;
-        //eq US
-        typename TFixedImage::IndexType indUS6;
-        int indUS_supZ;
-        if(fixedImage->TransformPhysicalPointToIndex(p6,indUS6))
-        {
-            //cout<<"le point 6 est dans le volume US !"<<endl;
-            indUS_supZ = indUS6[1];
-            //cout<<"indice us : "<<indUS6<<endl;
-            
-        }
-        else
-            indUS_supZ = sizeUS[1]-1;
-        
-//        cout<<"test verification"<<endl;
-//        cout<<"indice inf X "<<indUS_infX<<endl;
-//        cout<<"indice sup X "<<indUS_supX<<endl;
-//        cout<<"indice inf Y "<<indUS_infY<<endl;
-//        cout<<"indice sup Y "<<indUS_supY<<endl;
-//        cout<<"indice inf Z "<<indUS_infZ<<endl;
-//        cout<<"indice sup Z "<<indUS_supZ<<endl;
-
-        
-        typename TFixedImage::IndexType startCropped;
-        startCropped[0] = indUS_infX ;
-        startCropped[1] = indUS_infZ;
-        startCropped[2] = indUS_infY ;
-        
-
-        
-        typename TFixedImage::IndexType endCropped;
-        endCropped[0] = indUS_supX;
-        endCropped[1] = indUS_supZ;
-        endCropped[2] = indUS_supY;
-        
-        
-        
-        typename TFixedImage::SizeType sizeCropped;
-        sizeCropped[0] = endCropped[0]-startCropped[0]+1;
-        sizeCropped[1] = endCropped[1]-startCropped[1]+1;
-        sizeCropped[2] = endCropped[2]-startCropped[2]+1;
-        
-        typename TFixedImage::RegionType regionCropped;
-        regionCropped.SetIndex(startCropped);
-        regionCropped.SetSize(sizeCropped);
-        
-        //Cropping de l'image originale
-        
-        typename ExtractorType::Pointer CroppingFilter = ExtractorType::New();
-        CroppingFilter->SetExtractionRegion(regionCropped);
-        CroppingFilter->SetInput(fixedImage);
-        CroppingFilter->SetDirectionCollapseToIdentity();
-        CroppingFilter->Update();
-        typename TFixedImage::Pointer Fixed_Cropped = CroppingFilter->GetOutput();
-        cout<<"verification image size : "<<Fixed_Cropped->GetLargestPossibleRegion().GetSize()<<endl;
-        
+//        
+//        
+//        typename TFixedImage::IndexType ind3;
+//        ind3[0] = sizeIRM[0]/2;
+//        ind3[1] = 0;
+//        ind3[2] = sizeIRM[2]/2;
+//        //cout<<"indice irm p3 : "<<ind3<<endl;
+//        typename TFixedImage::PointType p3;
+//        fixedImage->TransformIndexToPhysicalPoint(ind3,p3);
+//        //cout<<"position spatiale p3 : "<<p3<<endl;
+//        //eq US
+//        typename TMovingImage::IndexType indUS3;
+//        int indUS_infY;
+//        if(movingImage->TransformPhysicalPointToIndex(p3,indUS3))
+//        {
+//            //cout<<"le point 3 est dans le volume US !"<<endl;
+//            //cout<<"indice us : "<<indUS3<<endl;
+//            indUS_infY = indUS3[2];
+//            
+//        }
+//        else
+//            indUS_infY = 0;
+//        
+//        typename TFixedImage::IndexType ind4;
+//        ind4[0] = sizeIRM[0]/2;
+//        ind4[1] = sizeIRM[1]-1;
+//        ind4[2] = sizeIRM[2]/2;
+//        //cout<<"indice irm p4 : "<<ind4<<endl;
+//        typename TFixedImage::PointType p4;
+//        fixedImage->TransformIndexToPhysicalPoint(ind4,p4);
+//        //cout<<"position spatiale p4 : "<<p4<<endl;
+//        //eq US
+//        typename TMovingImage::IndexType indUS4;
+//        int indUS_supY;
+//        if(movingImage->TransformPhysicalPointToIndex(p4,indUS4))
+//        {
+//            //cout<<"le point 4 est dans le volume US !"<<endl;
+//            //cout<<"indice us : "<<indUS4<<endl;
+//            indUS_supY = indUS4[2];
+//            
+//        }
+//        else
+//            indUS_supY = sizeUS[2]-1;
+//        
+//        typename TFixedImage::IndexType ind5;
+//        ind5[0] = sizeIRM[0]/2;
+//        ind5[1] = sizeIRM[1]/2;
+//        ind5[2] = 0;
+//        //cout<<"indice irm p5 : "<<ind5<<endl;
+//        typename TFixedImage::PointType p5;
+//        fixedImage->TransformIndexToPhysicalPoint(ind5,p5);
+//        //cout<<"position spatiale p5 : "<<p5<<endl;
+//        //eq US
+//        typename TMovingImage::IndexType indUS5;
+//        int indUS_infZ;
+//        if(movingImage->TransformPhysicalPointToIndex(p5,indUS5))
+//        {
+//            //cout<<"le point 5 est dans le volume US !"<<endl;
+//            //cout<<"indice us : "<<indUS5<<endl;
+//            indUS_infZ = indUS5[1];
+//            
+//        }
+//        else
+//            indUS_infZ = 0;
+//        
+//        typename TFixedImage::IndexType ind6;
+//        ind6[0] = sizeIRM[0]/2;
+//        ind6[1] = sizeIRM[1]/2;
+//        ind6[2] = sizeIRM[2]-1;
+//        //cout<<"indice irm p6 : "<<ind6<<endl;
+//        typename TFixedImage::PointType p6;
+//        fixedImage->TransformIndexToPhysicalPoint(ind6,p6);
+//        //cout<<"position spatiale p6 : "<<p6<<endl;
+//        //eq US
+//        typename TMovingImage::IndexType indUS6;
+//        int indUS_supZ;
+//        if(movingImage->TransformPhysicalPointToIndex(p6,indUS6))
+//        {
+//            //cout<<"le point 6 est dans le volume US !"<<endl;
+//            indUS_supZ = indUS6[1];
+//            //cout<<"indice us : "<<indUS6<<endl;
+//            
+//        }
+//        else
+//            indUS_supZ = sizeUS[1]-1;
+//        
+////        cout<<"test verification"<<endl;
+////        cout<<"indice inf X "<<indUS_infX<<endl;
+////        cout<<"indice sup X "<<indUS_supX<<endl;
+////        cout<<"indice inf Y "<<indUS_infY<<endl;
+////        cout<<"indice sup Y "<<indUS_supY<<endl;
+////        cout<<"indice inf Z "<<indUS_infZ<<endl;
+////        cout<<"indice sup Z "<<indUS_supZ<<endl;
+//
+//        
+//        typename TMovingImage::IndexType startCropped;
+//        startCropped[0] = indUS_infX ;
+//        startCropped[1] = indUS_infZ;
+//        startCropped[2] = indUS_infY ;
+//        
+//
+//        
+//        typename TMovingImage::IndexType endCropped;
+//        endCropped[0] = indUS_supX;
+//        endCropped[1] = indUS_supZ;
+//        endCropped[2] = indUS_supY;
+//        
+//        
+//        
+//        typename TMovingImage::SizeType sizeCropped;
+//        sizeCropped[0] = endCropped[0]-startCropped[0]+1;
+//        sizeCropped[1] = endCropped[1]-startCropped[1]+1;
+//        sizeCropped[2] = endCropped[2]-startCropped[2]+1;
+//        
+//        typename TMovingImage::RegionType regionCropped;
+//        regionCropped.SetIndex(startCropped);
+//        regionCropped.SetSize(sizeCropped);
+//        
+//        //Cropping de l'image originale
+//        
+//        typename ExtractorType::Pointer CroppingFilter = ExtractorType::New();
+//        CroppingFilter->SetExtractionRegion(regionCropped);
+//        CroppingFilter->SetInput(movingImage);
+//        CroppingFilter->SetDirectionCollapseToIdentity();
+//        CroppingFilter->Update();
+//        typename TMovingImage::Pointer moving_Cropped = CroppingFilter->GetOutput();
+//        cout<<"verification image size : "<<moving_Cropped->GetLargestPossibleRegion().GetSize()<<endl;
+//        
 //        //writing to verify
 //        typename WriterType::Pointer writer4 = WriterType::New();
 //        //itk::NiftiImageIO::Pointer io = itk::NiftiImageIO::New();
 //        string out4 = "/Users/maximegerard/Documents/testCroppingUS.nii.gz";
 //        writer4->SetImageIO(io);
-//        writer4->SetInput(Fixed_Cropped);
+//        writer4->SetInput(moving_Cropped);
 //        writer4->SetFileName(out4);
 //        try {
 //            writer4->Update();
@@ -420,23 +514,235 @@ double
 //            cerr<<"error while writing croppped mask image"<<endl;
 //            cerr<<e<<endl;
 //        }
-    
-        //on ne considere que les pixels non nuls de l'image US
+//
+//        //on ne considere que les pixels non nuls de l'image US
+//        
+//        // On peut parcourir l'image avec le voisinnage mais ne faire les actions qui si le pixel eq dans le mask est a 1
         
-        // On peut parcourir l'image avec le voisinnage mais ne faire les actions qui si le pixel eq dans le mask est a 1
+
+        
+        //Transform Mask
+        
+        EulerTransformType::Pointer tsf = EulerTransformType::New();
+        tsf->SetParameters(parameters);
+        
+        MaskType::SizeType sizeUS = m_mask->GetLargestPossibleRegion().GetSize();
+        MaskType::PointType origin = m_mask->GetOrigin();
+        MaskType::SpacingType spacing = m_mask->GetSpacing();
+        MaskType::PointType center;
+        center[0] = origin[0]+spacing[0]*sizeUS[0]/2;
+        center[1] = origin[1]+spacing[1]*sizeUS[1]/2;
+        center[2] = origin[2]+spacing[2]*sizeUS[2]/2;
+        
+        
+        EulerTransformType::ParametersType eulerFixedParameters(3);
+        eulerFixedParameters[0] =center[0];
+        eulerFixedParameters[1] =center[1];
+        eulerFixedParameters[2] =center[2];
+        
+        tsf->SetFixedParameters(eulerFixedParameters);
+        
+        cout<<"euler parameters in test function : "<<endl;
+        cout<<"optimizable param : "<<tsf->GetParameters()<<endl;
+        cout<<" fixed param : "<<tsf->GetFixedParameters()<<endl;
+        
+        //transformation du mask
+        ResamplerBinaryType::Pointer maskResampler = ResamplerBinaryType::New();
+        maskResampler->SetInput(m_mask);
+        maskResampler->SetOutputDirection(fixedImage->GetDirection());
+        maskResampler->SetOutputOrigin(fixedImage->GetOrigin());
+        maskResampler->SetOutputSpacing(fixedImage->GetSpacing());
+        maskResampler->SetSize(fixedImage->GetLargestPossibleRegion().GetSize());
+        maskResampler->SetTransform(tsf);
+        
+        try {
+            maskResampler->Update();
+        } catch (itk::ExceptionObject &e) {
+            cerr<<"error while translating image"<<endl;
+            cerr<<e<<endl;
+            return EXIT_FAILURE;
+        }
+        
+        MaskType::Pointer tsfMask = maskResampler->GetOutput();
+        
+        
+//        BinaryWriterType::Pointer writer7 = BinaryWriterType::New();
+//        string out7 ="/Users/maximegerard/Documents/tsfmask.nii.gz";
+//        writer7->SetImageIO(io);
+//        writer7->SetInput(tsfMask);
+//        writer7->SetFileName(out7);
+//        try {
+//            writer7->Update();
+//        } catch (itk::ExceptionObject &e) {
+//            cerr<<"error whilte writing tsf mask image"<<endl;
+//            cerr<<e<<endl;
+//            return EXIT_FAILURE;
+//        }
+        
+        cout<<"done writing transformed mask"<<endl;
+        
+        //DOWN SAMPLING LE MASK
+        
+        BinaryShrinkFilterType::Pointer binaryShrink = BinaryShrinkFilterType::New();
+        binaryShrink->SetInput(tsfMask);
+        binaryShrink->SetShrinkFactor(0, 2);
+        binaryShrink->SetShrinkFactor(1, 2);
+        binaryShrink->SetShrinkFactor(2, 2);
+        try {
+            binaryShrink->Update();
+        } catch (itk::ExceptionObject &e) {
+            cerr<<"error while downsampling US image"<<endl;
+            cerr<<e<<endl;
+            return EXIT_FAILURE;
+        }
+        
+        MaskType::Pointer mask_shrunk = binaryShrink->GetOutput();
+        cout<<"taille mask basse res : "<<mask_shrunk->GetLargestPossibleRegion().GetSize()<<endl;
+        
+        
+        //Cropping considerant le zone non nulle de l'US
+        //pour garder les boundaries
+        int indMaxX =0;
+        int indMinX = 100000;
+        int indMaxY =0;
+        int indMinY = 100000;
+        int indMaxZ =0;
+        int indMinZ = 100000;
+        
+        //iterateur pour le mask
+        
+        BinaryImageIteratorType mask_it(mask_shrunk,mask_shrunk->GetLargestPossibleRegion());
+        mask_it.GoToBegin();
+        while(!mask_it.IsAtEnd())
+        {
+            if(mask_it.Get()>0)
+            {
+                MaskType::IndexType ind = mask_it.GetIndex();
+                
+                //X
+                if(ind[0]>indMaxX)
+                {
+                    indMaxX=ind[0];
+                }
+                
+                else if(ind[0]<indMinX)
+                {
+                    indMinX=ind[0];
+                }
+                
+                //Y
+                if(ind[1]>indMaxY)
+                {
+                    indMaxY=ind[1];
+                }
+                
+                else if(ind[1]<indMinY)
+                {
+                    indMinY=ind[1];
+                }
+                
+                //Z
+                if(ind[2]>indMaxZ)
+                {
+                    indMaxZ=ind[2];
+                }
+                
+                else if(ind[2]<indMinZ)
+                {
+                    indMinZ=ind[2];
+                }
+            }
+            
+            ++mask_it;
+            
+        }
+        
+        cout<<"indices minimum X,Y,Z "<<endl;
+        cout<<"X : "<<indMinX<<" "<<indMaxX<<endl;
+        cout<<"Y : "<<indMinY<<" "<<indMaxY<<endl;
+        cout<<"Z : "<<indMinZ<<" "<<indMaxZ<<endl;
+        
+        typename TMovingImage::IndexType startCropped;
+        startCropped[0] = indMinX ;
+        startCropped[1] = indMinY;
+        startCropped[2] = indMinZ;
+        
+        
+        
+        typename TMovingImage::IndexType endCropped;
+        endCropped[0] = indMaxX;
+        endCropped[1] = indMaxY;
+        endCropped[2] = indMaxZ;
+        
+        
+        
+        typename TMovingImage::SizeType sizeCropped;
+        sizeCropped[0] = endCropped[0]-startCropped[0]+1;
+        sizeCropped[1] = endCropped[1]-startCropped[1]+1;
+        sizeCropped[2] = endCropped[2]-startCropped[2]+1;
+        
+        typename TMovingImage::RegionType regionCropped;
+        regionCropped.SetIndex(startCropped);
+        regionCropped.SetSize(sizeCropped);
+        
+        //Cropping de l'image originale
+
+        typename ExtractorType::Pointer CroppingFilter = ExtractorType::New();
+        CroppingFilter->SetExtractionRegion(regionCropped);
+        CroppingFilter->SetInput(movingImage);
+        CroppingFilter->SetDirectionCollapseToIdentity();
+        CroppingFilter->Update();
+        typename TMovingImage::Pointer moving_Cropped = CroppingFilter->GetOutput();
+        cout<<"verification image size : "<<moving_Cropped->GetLargestPossibleRegion().GetSize()<<endl;
+        
+//        //writing to verify
+//        typename WriterType::Pointer writer4 = WriterType::New();
+//        //itk::NiftiImageIO::Pointer io = itk::NiftiImageIO::New();
+//        string out4 = "/Users/maximegerard/Documents/testCroppingUS.nii.gz";
+//        writer4->SetImageIO(io);
+//        writer4->SetInput(moving_Cropped);
+//        writer4->SetFileName(out4);
+//        try {
+//            writer4->Update();
+//        } catch (itk::ExceptionObject &e) {
+//            cerr<<"error while writing croppped image"<<endl;
+//            cerr<<e<<endl;
+//        }
+        
+        cout<<"done cropping image"<<endl;
+        
+//        //DOWNSAMPLING US ET MASK
+//        ShrinkFilterType::Pointer shrinkFilter = ShrinkFilterType::New();
+//        shrinkFilter->SetInput(moving_Cropped);
+//        shrinkFilter->SetShrinkFactor(0, 2);
+//        shrinkFilter->SetShrinkFactor(1, 2);
+//        shrinkFilter->SetShrinkFactor(2, 2);
+//        try {
+//            shrinkFilter->Update();
+//        } catch (itk::ExceptionObject &e) {
+//            cerr<<"error while downsampling US image"<<endl;
+//            cerr<<e<<endl;
+//            return EXIT_FAILURE;
+//        }
+//        
+//        ImageType::moving_Shrunk
+        
+        
+        
+        
        
         //////////////////////////////////////////
         // REGION ACCESSIBLE POUR NEIGHBORHOOD //
         ////////////////////////////////////////
         cout<<"defining accessible region of image"<<endl;
         //on itere sur toute l'image accessible -> celle pour laquelle le neighboorhood it ne va pas sortir de l'image
-        typename TFixedImage::RegionType accessibleImagePart;
-        typename TFixedImage::RegionType::IndexType startIndex = Fixed_Cropped->GetLargestPossibleRegion().GetIndex();
+        typename TMovingImage::RegionType accessibleImagePart;
+        typename TMovingImage::RegionType::IndexType startIndex = moving_Cropped->GetLargestPossibleRegion().GetIndex();//moving_Cropped->GetLargestPossibleRegion().GetIndex();
         startIndex[0] =startIndex[0]+3;
         startIndex[1] =startIndex[1]+3;
         startIndex[2] =startIndex[2]+3;
-        typename TFixedImage::RegionType::SizeType sizeAccessible;
-        typename TFixedImage::SizeType sizeIm = Fixed_Cropped->GetLargestPossibleRegion().GetSize();
+        typename TMovingImage::RegionType::SizeType sizeAccessible;
+        typename TMovingImage::SizeType sizeIm = moving_Cropped->GetLargestPossibleRegion().GetSize();//moving_Cropped
         sizeAccessible[0] = sizeIm[0]-6;
         sizeAccessible[1] = sizeIm[1]-6;
         sizeAccessible[2] = sizeIm[2]-6;
@@ -455,7 +761,7 @@ double
         // ITERATIONS OVER IMAGE /
         /////////////////////////
         //to iterate over the accessible part of fixedImage
-        ImageConstIteratorType US_it(fixedImage,accessibleImagePart);
+        ImageConstIteratorType US_it(movingImage,accessibleImagePart);
         US_it.GoToBegin();
         
 
@@ -481,15 +787,15 @@ double
         {
             //cout<<"US index under consideration : "<<US_it.GetIndex()<<endl;
             //on ne considere le voisinage que si le centre appartient à la region blanche du mask et s'il est a l'int de l'im IRM
-            typename TMovingImage::PointType p;
-            //get the equivalent in physical point to evaluate whether it's within the MRI image
-            fixedImage->TransformIndexToPhysicalPoint(US_it.GetIndex(),p);
-            //cout<<"Physical space coordinates of center of neighbourhood : "<<p<<endl;
-            typename TMovingImage::IndexType i;
+//            typename TMovingImage::PointType p;
+//            //get the equivalent in physical point to evaluate whether it's within the MRI image
+//            movingImage->TransformIndexToPhysicalPoint(US_it.GetIndex(),p);
+//            //cout<<"Physical space coordinates of center of neighbourhood : "<<p<<endl;
+//            typename TFixedImage::IndexType i;
             //cout<<"verification mask -US : "<<int(m_mask->GetPixel(US_it.GetIndex()))<<endl;
             
             //we consider the neighbourhood only if it's center is in the actual US data and not outside of the MRI volume
-            if(int(m_mask->GetPixel(US_it.GetIndex()))>0 && movingImage->TransformPhysicalPointToIndex(p,i))
+            if(int(mask_shrunk->GetPixel(US_it.GetIndex()))==255 )//&& fixedImage->TransformPhysicalPointToIndex(p,i))
             {
                 //cout<<"neighbourhood in real US data"<<endl;
                 // new neighborhood at each loop iteration
@@ -515,8 +821,8 @@ double
                 
                 //define neighbourhood
                 //here we define it as a region around the current pixel
-                typename TFixedImage::RegionType neighbourhood;
-                typename TFixedImage::RegionType::IndexType start;
+                typename TMovingImage::RegionType neighbourhood;
+                typename TMovingImage::RegionType::IndexType start;
                 //le debut de la region = le premier indice du masque
                 start = US_it.GetIndex();
                 //le vrai debut est 3 pixel plus haut, plus a gauche et plus en profondeur
@@ -525,7 +831,7 @@ double
                 start[2]= start[2]-3;
                 
                 //7-by-7 cube
-                typename TFixedImage::RegionType::SizeType sizeN;
+                typename TMovingImage::RegionType::SizeType sizeN;
                 sizeN[0] = 7;
                 sizeN[1] = 7;
                 sizeN[2] = 7;
@@ -533,7 +839,7 @@ double
                 neighbourhood.SetIndex(start);
                 neighbourhood.SetSize(sizeN);
                 
-                ImageConstIteratorType it(fixedImage,neighbourhood);
+                ImageConstIteratorType it(movingImage,neighbourhood);
                 
                 it.GoToBegin();
                 
@@ -550,18 +856,18 @@ double
                     mean = mean + it.Get();
                 
                     //on recupere le point dans l'espace correspondant pour aller le chercher dans l'IRM
-                    typename TFixedImage::IndexType indexUS = it.GetIndex();
-                    typename TFixedImage::PointType pt;
+                    typename TMovingImage::IndexType indexUS = it.GetIndex();
+                    typename TMovingImage::PointType pt;
                 
-                    fixedImage->TransformIndexToPhysicalPoint(indexUS, pt);
-                    //pt now contains the position in physica space of the considered voxel
+                    movingImage->TransformIndexToPhysicalPoint(indexUS, pt);
+                    //pt now contains the position in physica space of the considered US voxel
                     
-                    typename TMovingImage::IndexType indexIRM;
+                    typename TFixedImage::IndexType indexIRM;
                 
                     //si le point est dans l'image IRM
-                    if(movingImage->TransformPhysicalPointToIndex(pt, indexIRM))
+                    if(fixedImage->TransformPhysicalPointToIndex(pt, indexIRM))
                     {
-                        M(indice,0) = movingImage->GetPixel(indexIRM);
+                        M(indice,0) = fixedImage->GetPixel(indexIRM);
                         M(indice,1) = image_grad->GetPixel(indexIRM);
                         //test with linear interpolator
 //                        M(indice,0) = interpolator->Evaluate(pt);
@@ -625,7 +931,7 @@ double
                     } catch (itk::ExceptionObject &e) {
                         cerr<<"Matrix det is null"<<endl;
                         cerr<<e<<endl;
-                        cerr<<"spatial position of center of neighbourhood"<<p<<endl;
+                        //cerr<<"spatial position of center of neighbourhood"<<p<<endl;
                         cerr<<"matric M"<<M<<endl;
                         cerr<<"metrice MTM"<<MTM<<endl;
                         //ici c'est pcq ce sont des patchs unifomrme qu'il y a erreur ?
@@ -662,7 +968,7 @@ double
                 else
                 {
                     cout<<"variance on patch is null"<<endl;
-                    cout<<"neighbourhood voxel center : "<<p<<endl;
+                    //cout<<"neighbourhood voxel center : "<<p<<endl;
                     cout<<U<<endl;
                     lc2 = 0;
                     
@@ -737,31 +1043,39 @@ LC2ImageToImageMetric<TFixedImage, TMovingImage>
     
     //transformation with regard to TransformParameters
     
-    //cout<<"test affichage param tsf : "<<parameters<<endl;
-    TranslationTransformType::Pointer transform = TranslationTransformType::New();
+ 
+    EulerTransformType::Pointer transform = EulerTransformType::New();
     transform->SetParameters(parameters);
-    cout<<"tsf parameters : "<<parameters<<endl;
+    cout<<"euler tsf parameters : "<<transform->GetParameters()<<endl;
+    
+    typename TMovingImage::SizeType sizeUS = movingImage->GetLargestPossibleRegion().GetSize();
+    typename TMovingImage::PointType origin = movingImage->GetOrigin();
+    typename TMovingImage::SpacingType spacing = movingImage->GetSpacing();
+    typename TMovingImage::PointType center;
+    center[0] = origin[0]+spacing[0]*sizeUS[0]/2;
+    center[1] = origin[1]+spacing[1]*sizeUS[1]/2;
+    center[2] = origin[2]+spacing[2]*sizeUS[2]/2;
+    
+    
+    EulerTransformType::ParametersType eulerFixedParameters(3);
+    eulerFixedParameters[0] =center[0];
+    eulerFixedParameters[1] =center[1];
+    eulerFixedParameters[2] =center[2];
+    
+    transform->SetFixedParameters(eulerFixedParameters);
+    cout<<"tsf fixed param : "<<transform->GetFixedParameters()<<endl;
+    
+   
     
     typename ResamplerType::Pointer resamplefilter = ResamplerType::New();
     resamplefilter->SetInput(movingImage);
-    resamplefilter->SetSize(movingImage->GetLargestPossibleRegion().GetSize());
-    resamplefilter->SetOutputSpacing(movingImage->GetSpacing());
-    resamplefilter->SetOutputDirection(movingImage->GetDirection());
-    //resamplefilter->SetTransform(transform->GetInverseTransform());
+    resamplefilter->SetSize(fixedImage->GetLargestPossibleRegion().GetSize());
+    resamplefilter->SetOutputSpacing(fixedImage->GetSpacing());
+    resamplefilter->SetOutputDirection(fixedImage->GetDirection());
+    resamplefilter->SetOutputOrigin(fixedImage->GetOrigin());
     resamplefilter->SetTransform(transform);
+    //resamplefilter->SetTransform(transform);
 
-    cout<<"origin de l'image mobile before tsf : "<<movingImage->GetOrigin()<<endl;
-    //typename TMovingImage::PointType origine = transform->TransformPoint(movingImage->GetOrigin());
-    typename TMovingImage::PointType origine = (transform->GetInverseTransform())->TransformPoint(movingImage->GetOrigin());
-    
-    
-//    origine[0] = origine[0]-parameters[0];
-//    origine[1] = origine[1]-parameters[1];
-//    origine[2] = origine[2]-parameters[2];
-    
-    cout<<"origin after tsf : "<<origine<<endl;
-    
-    resamplefilter->SetOutputOrigin(origine);
     try {
         resamplefilter->Update();
     } catch (itk::ExceptionObject &e) {
@@ -771,212 +1085,146 @@ LC2ImageToImageMetric<TFixedImage, TMovingImage>
     }
     
     typename TMovingImage::Pointer movedImage = resamplefilter->GetOutput();
-
-    //gradient IRM
     
-    cout<<"compute gradient of MRI image"<<endl;
+    //downsampling de l'image US
     
-    typename GradientFilterType::Pointer filterG = GradientFilterType::New();
-    filterG->SetInput(movedImage);
+    typename ShrinkFilterType::Pointer shrinkFilter = ShrinkFilterType::New();
+    shrinkFilter->SetInput(movedImage);
+    shrinkFilter->SetShrinkFactor(0,2);
+    shrinkFilter->SetShrinkFactor(1,2);
+    shrinkFilter->SetShrinkFactor(2,2);
     try {
-        filterG->Update();
+        shrinkFilter->Update();
     } catch (itk::ExceptionObject &e) {
-        cerr<<"error while computing gradient image"<<endl;
+        cerr<<"error while downsampling transormed us"<<endl;
         cerr<<e<<endl;
-        EXIT_FAILURE;
+        return EXIT_FAILURE;
     }
     
-    typename TMovingImage::Pointer image_grad = filterG->GetOutput();
+    //downsampled transformed US = the one on which we effectuate the LC2 computation
+    typename TMovingImage::Pointer movingImageT = shrinkFilter->GetOutput();
     
-    //write image for test
+    //Transformation de l'image binaire
+    //la tsf est la mm que pour l'US
     
-    //        typename WriterType::Pointer writer1 = WriterType::New();
-    //        string out1 = "/Users/maximegerard/Documents/testgrad.nii.gz";
-    //        NiftiImageIO::Pointer io = NiftiImageIO::New();
-    //        writer1->SetInput(image_grad);
-    //        writer1->SetImageIO(io);
-    //        writer1->SetFileName(out1);
-    //        try {
-    //            writer1->Update();
-    //        } catch (itk::ExceptionObject &e) {
-    //            cerr<<"error while writing image file"<<endl;
-    //            cerr<<e<<endl;
-    //            EXIT_FAILURE;
-    //        }
-    //
-    //        cout<<"done writing gradient image"<<endl;
+    //transformation du mask
+    ResamplerBinaryType::Pointer maskResampler = ResamplerBinaryType::New();
+    maskResampler->SetInput(m_mask);
+    maskResampler->SetOutputDirection(fixedImage->GetDirection());
+    maskResampler->SetOutputOrigin(fixedImage->GetOrigin());
+    maskResampler->SetOutputSpacing(fixedImage->GetSpacing());
+    maskResampler->SetSize(fixedImage->GetLargestPossibleRegion().GetSize());
+    maskResampler->SetTransform(transform);
     
-    ///////////////////////////////////////
-    //CROPPING CONSIDERING MRI POSITION //
-    //////////////////////////////////////
+    try {
+        maskResampler->Update();
+    } catch (itk::ExceptionObject &e) {
+        cerr<<"error while translating image"<<endl;
+        cerr<<e<<endl;
+        return EXIT_FAILURE;
+    }
     
+    MaskType::Pointer tsfMask = maskResampler->GetOutput();
     
-    //on s'interesse au voxel au milieu de chacun des face du volume MRI
+    //down sampling du mask
     
-    //get the limits of images in terms of indexes
-    typename TMovingImage::SizeType sizeIRM = movedImage->GetLargestPossibleRegion().GetSize();
-    cout<<"size IRM : "<<sizeIRM<<endl;
-    typename TFixedImage::SizeType sizeUS = fixedImage->GetLargestPossibleRegion().GetSize();
-    cout<<"size US : "<<sizeUS<<endl;
+    BinaryShrinkFilterType::Pointer binaryShrink = BinaryShrinkFilterType::New();
+    binaryShrink->SetInput(tsfMask);
+    binaryShrink->SetShrinkFactor(0, 2);
+    binaryShrink->SetShrinkFactor(1, 2);
+    binaryShrink->SetShrinkFactor(2, 2);
+    try {
+        binaryShrink->Update();
+    } catch (itk::ExceptionObject &e) {
+        cerr<<"error while downsampling US image"<<endl;
+        cerr<<e<<endl;
+        return EXIT_FAILURE;
+    }
     
-    typename TMovingImage::IndexType ind1;
-    ind1[0] = 0;
-    ind1[1] = sizeIRM[1]/2;
-    ind1[2] = sizeIRM[2]/2;
-    //cout<<"index IRM p1 : "<<ind1<<endl;
-    typename TMovingImage::PointType p1;
-    movedImage->TransformIndexToPhysicalPoint(ind1,p1);
-    //cout<<"position spatiale p1 : "<<p1<<endl;;
-    //eq US
-    typename TFixedImage::IndexType indUS1;
-    int indUS_infX;
-    if(fixedImage->TransformPhysicalPointToIndex(p1,indUS1))
+    MaskType::Pointer mask_shrunk = binaryShrink->GetOutput();
+
+    //Cropping considerant le zone non nulle de l'US
+    //pour garder les boundaries
+    int indMaxX =0;
+    int indMinX = 100000;
+    int indMaxY =0;
+    int indMinY = 100000;
+    int indMaxZ =0;
+    int indMinZ = 100000;
+    
+    //iterateur pour le mask
+    
+    BinaryImageIteratorType mask_it(mask_shrunk,mask_shrunk->GetLargestPossibleRegion());
+    mask_it.GoToBegin();
+    while(!mask_it.IsAtEnd())
     {
-        //cout<<"le point 1 est dans le volume US !"<<endl;
-        //cout<<"indice US : "<<indUS1<<endl;
-        indUS_infX = indUS1[0];
+        if(mask_it.Get()>0)
+        {
+            MaskType::IndexType ind = mask_it.GetIndex();
+            
+            //X
+            if(ind[0]>indMaxX)
+            {
+                indMaxX=ind[0];
+            }
+            
+            else if(ind[0]<indMinX)
+            {
+                indMinX=ind[0];
+            }
+            
+            //Y
+            if(ind[1]>indMaxY)
+            {
+                indMaxY=ind[1];
+            }
+            
+            else if(ind[1]<indMinY)
+            {
+                indMinY=ind[1];
+            }
+            
+            //Z
+            if(ind[2]>indMaxZ)
+            {
+                indMaxZ=ind[2];
+            }
+            
+            else if(ind[2]<indMinZ)
+            {
+                indMinZ=ind[2];
+            }
+        }
+        
+        ++mask_it;
         
     }
-    else
-        indUS_infX = 0;
     
-    typename TMovingImage::IndexType ind2;
-    ind2[0] = sizeIRM[0]-1;
-    ind2[1] = sizeIRM[1]/2;
-    ind2[2] = sizeIRM[2]/2;
-    //cout<<"indice irm p2 : "<<ind2<<endl;
-    typename TMovingImage::PointType p2;
-    movedImage->TransformIndexToPhysicalPoint(ind2,p2);
-    //cout<<"position spatiale p2 : "<<p2<<endl;
-    //eq US
-    typename TFixedImage::IndexType indUS2;
-    int indUS_supX;
-    if(fixedImage->TransformPhysicalPointToIndex(p2,indUS2))
-    {
-        //cout<<"le point 2 est dans le volume US !"<<endl;
-        //cout<<"indice US : "<<indUS2<<endl;
-        indUS_supX = indUS2[0];
-        
-    }
+    cout<<"indices minimum X,Y,Z "<<endl;
+    cout<<"X : "<<indMinX<<" "<<indMaxX<<endl;
+    cout<<"Y : "<<indMinY<<" "<<indMaxY<<endl;
+    cout<<"Z : "<<indMinZ<<" "<<indMaxZ<<endl;
     
-    else
-        indUS_supX = sizeUS[0]-1;
+    typename TMovingImage::IndexType startCropped;
+    startCropped[0] = indMinX ;
+    startCropped[1] = indMinY;
+    startCropped[2] = indMinZ;
     
     
     
-    typename TMovingImage::IndexType ind3;
-    ind3[0] = sizeIRM[0]/2;
-    ind3[1] = 0;
-    ind3[2] = sizeIRM[2]/2;
-    //cout<<"indice irm p3 : "<<ind3<<endl;
-    typename TMovingImage::PointType p3;
-    movedImage->TransformIndexToPhysicalPoint(ind3,p3);
-    //cout<<"position spatiale p3 : "<<p3<<endl;
-    //eq US
-    typename TFixedImage::IndexType indUS3;
-    int indUS_infY;
-    if(fixedImage->TransformPhysicalPointToIndex(p3,indUS3))
-    {
-        //cout<<"le point 3 est dans le volume US !"<<endl;
-        //cout<<"indice us : "<<indUS3<<endl;
-        indUS_infY = indUS3[2];
-        
-    }
-    else
-        indUS_infY = 0;
-    
-    typename TMovingImage::IndexType ind4;
-    ind4[0] = sizeIRM[0]/2;
-    ind4[1] = sizeIRM[1]-1;
-    ind4[2] = sizeIRM[2]/2;
-    //cout<<"indice irm p4 : "<<ind4<<endl;
-    typename TMovingImage::PointType p4;
-    movedImage->TransformIndexToPhysicalPoint(ind4,p4);
-    //cout<<"position spatiale p4 : "<<p4<<endl;
-    //eq US
-    typename TFixedImage::IndexType indUS4;
-    int indUS_supY;
-    if(fixedImage->TransformPhysicalPointToIndex(p4,indUS4))
-    {
-        //cout<<"le point 4 est dans le volume US !"<<endl;
-        //cout<<"indice us : "<<indUS4<<endl;
-        indUS_supY = indUS4[2];
-        
-    }
-    else
-        indUS_supY = sizeUS[2]-1;
-    
-    typename TMovingImage::IndexType ind5;
-    ind5[0] = sizeIRM[0]/2;
-    ind5[1] = sizeIRM[1]/2;
-    ind5[2] = 0;
-    //cout<<"indice irm p5 : "<<ind5<<endl;
-    typename TMovingImage::PointType p5;
-    movedImage->TransformIndexToPhysicalPoint(ind5,p5);
-    //cout<<"position spatiale p5 : "<<p5<<endl;
-    //eq US
-    typename TFixedImage::IndexType indUS5;
-    int indUS_infZ;
-    if(fixedImage->TransformPhysicalPointToIndex(p5,indUS5))
-    {
-        //cout<<"le point 5 est dans le volume US !"<<endl;
-        //cout<<"indice us : "<<indUS5<<endl;
-        indUS_infZ = indUS5[1];
-        
-    }
-    else
-        indUS_infZ = 0;
-    
-    typename TMovingImage::IndexType ind6;
-    ind6[0] = sizeIRM[0]/2;
-    ind6[1] = sizeIRM[1]/2;
-    ind6[2] = sizeIRM[2]-1;
-    //cout<<"indice irm p6 : "<<ind6<<endl;
-    typename TMovingImage::PointType p6;
-    movedImage->TransformIndexToPhysicalPoint(ind6,p6);
-    //cout<<"position spatiale p6 : "<<p6<<endl;
-    //eq US
-    typename TFixedImage::IndexType indUS6;
-    int indUS_supZ;
-    if(fixedImage->TransformPhysicalPointToIndex(p6,indUS6))
-    {
-        //cout<<"le point 6 est dans le volume US !"<<endl;
-        indUS_supZ = indUS6[1];
-        //cout<<"indice us : "<<indUS6<<endl;
-        
-    }
-    else
-        indUS_supZ = sizeUS[1]-1;
-    
-    //        cout<<"test verification"<<endl;
-    //        cout<<"indice inf X "<<indUS_infX<<endl;
-    //        cout<<"indice sup X "<<indUS_supX<<endl;
-    //        cout<<"indice inf Y "<<indUS_infY<<endl;
-    //        cout<<"indice sup Y "<<indUS_supY<<endl;
-    //        cout<<"indice inf Z "<<indUS_infZ<<endl;
-    //        cout<<"indice sup Z "<<indUS_supZ<<endl;
-    
-    
-    typename TFixedImage::IndexType startCropped;
-    startCropped[0] = indUS_infX ;
-    startCropped[1] = indUS_infZ;
-    startCropped[2] = indUS_infY ;
+    typename TMovingImage::IndexType endCropped;
+    endCropped[0] = indMaxX;
+    endCropped[1] = indMaxY;
+    endCropped[2] = indMaxZ;
     
     
     
-    typename TFixedImage::IndexType endCropped;
-    endCropped[0] = indUS_supX;
-    endCropped[1] = indUS_supZ;
-    endCropped[2] = indUS_supY;
-    
-    
-    
-    typename TFixedImage::SizeType sizeCropped;
+    typename TMovingImage::SizeType sizeCropped;
     sizeCropped[0] = endCropped[0]-startCropped[0]+1;
     sizeCropped[1] = endCropped[1]-startCropped[1]+1;
     sizeCropped[2] = endCropped[2]-startCropped[2]+1;
     
-    typename TFixedImage::RegionType regionCropped;
+    typename TMovingImage::RegionType regionCropped;
     regionCropped.SetIndex(startCropped);
     regionCropped.SetSize(sizeCropped);
     
@@ -984,11 +1232,11 @@ LC2ImageToImageMetric<TFixedImage, TMovingImage>
     
     typename ExtractorType::Pointer CroppingFilter = ExtractorType::New();
     CroppingFilter->SetExtractionRegion(regionCropped);
-    CroppingFilter->SetInput(fixedImage);
+    CroppingFilter->SetInput(movingImageT);
     CroppingFilter->SetDirectionCollapseToIdentity();
     CroppingFilter->Update();
-    typename TFixedImage::Pointer Fixed_Cropped = CroppingFilter->GetOutput();
-    cout<<"verification image size : "<<Fixed_Cropped->GetLargestPossibleRegion().GetSize()<<endl;
+    typename TMovingImage::Pointer moving_Cropped = CroppingFilter->GetOutput();
+    cout<<"verification image size : "<<moving_Cropped->GetLargestPossibleRegion().GetSize()<<endl;
     
     //        //writing to verify
     //        typename WriterType::Pointer writer4 = WriterType::New();
@@ -1004,28 +1252,7 @@ LC2ImageToImageMetric<TFixedImage, TMovingImage>
     //            cerr<<e<<endl;
     //        }
     
-    //Cropping de l'image mask
-    //pas necessaire on doit juste savoir a quelle region se limiter = region de cropped
-    
-    //        typename BinaryExtractorType::Pointer BinaryCroppingFilter = BinaryExtractorType::New();
-    //        BinaryCroppingFilter->SetExtractionRegion(regionCropped);
-    //        BinaryCroppingFilter->SetInput(m_mask);
-    //        BinaryCroppingFilter->SetDirectionCollapseToIdentity();
-    //        BinaryCroppingFilter->Update();
-    //        MaskType::Pointer mask_Cropped = BinaryCroppingFilter->GetOutput();
-    
-    //        //writing to verify
-    //        typename BinaryWriterType::Pointer writer5 = BinaryWriterType::New();
-    //        string out5 = "/Users/maximegerard/Documents/testCroppingMask.nii.gz";
-    //        writer5->SetImageIO(io);
-    //        writer5->SetInput(mask_Cropped);
-    //        writer5->SetFileName(out5);
-    //        try {
-    //            writer5->Update();
-    //        } catch (itk::ExceptionObject &e) {
-    //            cerr<<"error while writing croppped mask image"<<endl;
-    //            cerr<<e<<endl;
-    //        }
+
     
     //on ne considere que les pixels non nuls de l'image US
     
@@ -1036,13 +1263,13 @@ LC2ImageToImageMetric<TFixedImage, TMovingImage>
     ////////////////////////////////////////
     cout<<"defining accessible region of image"<<endl;
     //on itere sur toute l'image accessible -> celle pour laquelle le neighboorhood it ne va pas sortir de l'image
-    typename TFixedImage::RegionType accessibleImagePart;
-    typename TFixedImage::RegionType::IndexType startIndex = Fixed_Cropped->GetLargestPossibleRegion().GetIndex();
+    typename TMovingImage::RegionType accessibleImagePart;
+    typename TMovingImage::RegionType::IndexType startIndex = moving_Cropped->GetLargestPossibleRegion().GetIndex();
     startIndex[0] =startIndex[0]+3;
     startIndex[1] =startIndex[1]+3;
     startIndex[2] =startIndex[2]+3;
-    typename TFixedImage::RegionType::SizeType sizeAccessible;
-    typename TFixedImage::SizeType sizeIm = Fixed_Cropped->GetLargestPossibleRegion().GetSize();
+    typename TMovingImage::RegionType::SizeType sizeAccessible;
+    typename TMovingImage::SizeType sizeIm = moving_Cropped->GetLargestPossibleRegion().GetSize();
     sizeAccessible[0] = sizeIm[0]-6;
     sizeAccessible[1] = sizeIm[1]-6;
     sizeAccessible[2] = sizeIm[2]-6;
@@ -1061,7 +1288,7 @@ LC2ImageToImageMetric<TFixedImage, TMovingImage>
     // ITERATIONS OVER IMAGE /
     /////////////////////////
     //to iterate over the accessible part of fixedImage
-    ImageConstIteratorType US_it(fixedImage,accessibleImagePart);
+    ImageConstIteratorType US_it(movingImageT,accessibleImagePart);
     US_it.GoToBegin();
     
     
@@ -1085,17 +1312,17 @@ LC2ImageToImageMetric<TFixedImage, TMovingImage>
     
     while(!US_it.IsAtEnd())
     {
-        //cout<<"US index under consideration : "<<US_it.GetIndex()<<endl;
-        //on ne considere le voisinage que si le centre appartient à la region blanche du mask et s'il est a l'int de l'im IRM
-        typename TMovingImage::PointType p;
-        //get the equivalent in physical point to evaluate whether it's within the MRI image
-        fixedImage->TransformIndexToPhysicalPoint(US_it.GetIndex(),p);
-        //cout<<"Physical space coordinates of center of neighbourhood : "<<p<<endl;
-        typename TMovingImage::IndexType i;
-        //cout<<"verification mask -US : "<<int(m_mask->GetPixel(US_it.GetIndex()))<<endl;
+//        //cout<<"US index under consideration : "<<US_it.GetIndex()<<endl;
+//        //on ne considere le voisinage que si le centre appartient à la region blanche du mask et s'il est a l'int de l'im IRM
+//        typename TMovingImage::PointType p;
+//        //get the equivalent in physical point to evaluate whether it's within the MRI image
+//        fixedImage->TransformIndexToPhysicalPoint(US_it.GetIndex(),p);
+//        //cout<<"Physical space coordinates of center of neighbourhood : "<<p<<endl;
+//        typename TMovingImage::IndexType i;
+//        //cout<<"verification mask -US : "<<int(m_mask->GetPixel(US_it.GetIndex()))<<endl;
         
         //we consider the neighbourhood only if it's center is in the actual US data and not outside of the MRI volume
-        if(int(m_mask->GetPixel(US_it.GetIndex()))>0 && movedImage->TransformPhysicalPointToIndex(p,i))
+        if(int(mask_shrunk->GetPixel(US_it.GetIndex()))==255)
         {
             //cout<<"neighbourhood in real US data"<<endl;
             // new neighborhood at each loop iteration
@@ -1121,8 +1348,8 @@ LC2ImageToImageMetric<TFixedImage, TMovingImage>
             
             //define neighbourhood
             //here we define it as a region around the current pixel
-            typename TFixedImage::RegionType neighbourhood;
-            typename TFixedImage::RegionType::IndexType start;
+            typename TMovingImage::RegionType neighbourhood;
+            typename TMovingImage::RegionType::IndexType start;
             //le debut de la region = le premier indice du masque
             start = US_it.GetIndex();
             //le vrai debut est 3 pixel plus haut, plus a gauche et plus en profondeur
@@ -1131,7 +1358,7 @@ LC2ImageToImageMetric<TFixedImage, TMovingImage>
             start[2]= start[2]-3;
             
             //7-by-7 cube
-            typename TFixedImage::RegionType::SizeType sizeN;
+            typename TMovingImage::RegionType::SizeType sizeN;
             sizeN[0] = 7;
             sizeN[1] = 7;
             sizeN[2] = 7;
@@ -1139,7 +1366,7 @@ LC2ImageToImageMetric<TFixedImage, TMovingImage>
             neighbourhood.SetIndex(start);
             neighbourhood.SetSize(sizeN);
             
-            ImageConstIteratorType it(fixedImage,neighbourhood);
+            ImageConstIteratorType it(movingImageT,neighbourhood);
             
             it.GoToBegin();
             
@@ -1156,19 +1383,21 @@ LC2ImageToImageMetric<TFixedImage, TMovingImage>
                 mean = mean + it.Get();
                 
                 //on recupere le point dans l'espace correspondant pour aller le chercher dans l'IRM
-                typename TFixedImage::IndexType indexUS = it.GetIndex();
-                typename TFixedImage::PointType pt;
+                typename TMovingImage::IndexType indexUS = it.GetIndex();
+                typename TMovingImage::PointType pt;
                 
-                fixedImage->TransformIndexToPhysicalPoint(indexUS, pt);
+                movingImageT->TransformIndexToPhysicalPoint(indexUS, pt);
                 //pt now contains the position in physica space of the considered voxel
                 
-                typename TMovingImage::IndexType indexIRM;
+                typename TFixedImage::IndexType indexIRM;
                 
                 //si le point est dans l'image IRM
-                if(movedImage->TransformPhysicalPointToIndex(pt, indexIRM))
+                if(fixedImage->TransformPhysicalPointToIndex(pt, indexIRM))
                 {
-                    M(indice,0) = movedImage->GetPixel(indexIRM);
-                    M(indice,1) = image_grad->GetPixel(indexIRM);
+                    M(indice,0) = fixedImage->GetPixel(indexIRM);
+                    //test vesselness rather than gradient
+                    //M(indice,1) = m_vesselness->GetPixel(indexIRM);
+                    M(indice,1) = m_grad->GetPixel(indexIRM);
                     //test with linear interpolator
                     //                        M(indice,0) = interpolator->Evaluate(pt);
                     //                        M(indice,1) = gradInterpolator->Evaluate(pt);
@@ -1231,7 +1460,7 @@ LC2ImageToImageMetric<TFixedImage, TMovingImage>
             } catch (itk::ExceptionObject &e) {
                 cerr<<"Matrix det is null"<<endl;
                 cerr<<e<<endl;
-                cerr<<"spatial position of center of neighbourhood"<<p<<endl;
+               // cerr<<"spatial position of center of neighbourhood"<<p<<endl;
                 cerr<<"matric M"<<M<<endl;
                 cerr<<"metrice MTM"<<MTM<<endl;
                 //ici c'est pcq ce sont des patchs unifomrme qu'il y a erreur ?
@@ -1268,7 +1497,7 @@ LC2ImageToImageMetric<TFixedImage, TMovingImage>
             else
             {
                 cout<<"variance on patch is null"<<endl;
-                cout<<"neighbourhood voxel center : "<<p<<endl;
+                //cout<<"neighbourhood voxel center : "<<p<<endl;
                 cout<<U<<endl;
                 lc2 = 0;
                 
@@ -1282,7 +1511,6 @@ LC2ImageToImageMetric<TFixedImage, TMovingImage>
             
             
         }
-        
         
         ++US_it;
         

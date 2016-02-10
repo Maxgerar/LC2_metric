@@ -34,6 +34,9 @@
 #include "itkShrinkImageFilter.h"
 #include "itkTranslationTransform.h"
 #include "itkCommand.h"
+#include "itkAffineTransform.h"
+
+#include <cmath>
 
 
 
@@ -58,6 +61,7 @@ typedef itk::ImageRegistrationMethod<ImageType, ImageType> RegistrationType;
 typedef itk::Euler3DTransform<double> TransformType;
 typedef itk::LC2ImageToImageMetric<ImageType, ImageType> LC2MetricType;
 typedef itk::TranslationTransform<double,3> TranslationType;
+typedef itk::AffineTransform<double,3> AffineTransformType;
 
 
 //pour le mapping de l'image mobile registree ac tsf determinee par registration framework
@@ -273,21 +277,21 @@ int main(int argc, const char * argv[]) {
     }
     
     ImageType::Pointer US_shrunk = shrinkFilter->GetOutput();
-    
-    //    //verification ecriture de l'image
-    //        WriterType::Pointer writer6 = WriterType::New();
-    //        string out6 = "/Users/maximegerard/Documents/ShrunkUS.nii.gz";
-    //      itk::NiftiImageIO::Pointer io = itk::NiftiImageIO::New();
-    //        writer6->SetImageIO(io);
-    //        writer6->SetInput(US_shrunk);
-    //        writer6->SetFileName(out6);
-    //        try {
-    //            writer6->Update();
-    //        } catch (itk::ExceptionObject &e) {
-    //            cerr<<"error while writing rescaled image"<<endl;
-    //            cerr<<e<<endl;
-    //            return EXIT_FAILURE;
-    //        }
+//
+        //verification ecriture de l'image
+            WriterType::Pointer writer6 = WriterType::New();
+            string out6 = "/Users/maximegerard/Documents/ShrunkUS.nii.gz";
+          //itk::NiftiImageIO::Pointer io = itk::NiftiImageIO::New();
+            writer6->SetImageIO(io);
+            writer6->SetInput(US_shrunk);
+            writer6->SetFileName(out6);
+            try {
+                writer6->Update();
+            } catch (itk::ExceptionObject &e) {
+                cerr<<"error while writing rescaled image"<<endl;
+                cerr<<e<<endl;
+                return EXIT_FAILURE;
+            }
     
     cout<<"done writing shrunk US"<<endl;
     
@@ -346,11 +350,12 @@ int main(int argc, const char * argv[]) {
     cout<<"creation tsf"<<endl;
     
     //euler tsf
-    //TransformType::Pointer transform = TransformType::New();
-    //transform->SetIdentity();
+    TransformType::Pointer transform = TransformType::New();
+    transform->SetIdentity();
     
     //tsl transform
-    TranslationType::Pointer transform = TranslationType::New();
+    //TranslationType::Pointer transform = TranslationType::New();
+    
     
     /////////////////
     // 2. OPTIMIZER /
@@ -426,30 +431,47 @@ int main(int argc, const char * argv[]) {
     
     //setting des images
     cout<<"setting images"<<endl;
-    registration->SetFixedImage(US_shrunk);
-    registration->SetMovingImage(rescaled_IRM);
+    registration->SetFixedImage(rescaled_IRM);
+    registration->SetMovingImage(US_shrunk);
     //just to be sure for the metric
-    metric->SetFixed(US_shrunk);
+    metric->SetFixed(rescaled_IRM);
+    metric->ComputeGradImage();
+    //metric->ComputeVesselnessImage();
+    metric->SetMoving(US_shrunk);
     metric->ComputeMask();
-    metric->SetMoving(rescaled_IRM);
-    registration->SetFixedImageRegion(US_shrunk->GetBufferedRegion());
     
-    //setting de la tsf initiale à 0,0,0 de tsl
-    transform->SetIdentity();
+    registration->SetFixedImageRegion(rescaled_IRM->GetBufferedRegion());
+    
     
     RegistrationType::ParametersType initialParameters = transform->GetParameters();
+    //setting des parametres optimizable
     initialParameters[0] = 0.0;
     initialParameters[1] = 0.0;
     initialParameters[2] = 0.0;
+    initialParameters[3] = 0.0; //euler tsf = 6 parameters
+    initialParameters[4] = 0.0;
+    initialParameters[5] = 0.0;
     
     registration->SetInitialTransformParameters(initialParameters);
     
-    cout<<"Initial transform param = "<<initialParameters<<endl;
+    cout<<"Initial transform param = "<<registration->GetTransform()->GetParameters()<<endl;
+    
+    /************
+     * OPTIMIZER
+     **************/
     
     //setting des params de l'optimizer
     const unsigned int numberOfParameters = transform->GetNumberOfParameters();
     OptimizerType::ParametersType simplexDelta(numberOfParameters);
-    simplexDelta.fill(5.0);
+    simplexDelta[0] =0.5;
+    simplexDelta[1] =0.5;
+    simplexDelta[2] =0.5;
+    simplexDelta[3] = 10;
+    simplexDelta[4] = 10;
+    simplexDelta[5] = 10;
+    
+    cout<<"verification simplex delta structure : "<<endl;
+    cout<<simplexDelta<<endl;
     
     optimizer->AutomaticInitialSimplexOff();
     optimizer->SetInitialSimplexDelta(simplexDelta);
@@ -482,42 +504,37 @@ int main(int argc, const char * argv[]) {
     
 
     RegistrationType::ParametersType finalParameters = registration->GetLastTransformParameters();
-    const double TX = finalParameters[0];
-    const double TY = finalParameters[1];
-    const double TZ = finalParameters[2];
     
     double bestValue = optimizer->GetValue();
     
     //Print out results
     
     cout<<"Results : "<<endl;
-    cout<<"Translation vector : "<<"[ "<<TX<<", "<<TY<<", "<<TZ<<" ]"<<endl;
+    //cout<<"Translation vector : "<<"[ "<<TX<<", "<<TY<<", "<<TZ<<" ]"<<endl;
+    cout<<"parametres : "<<finalParameters<<endl;
     cout<<"metric value : "<<bestValue<<endl;
     
     cout<<"formation de l'image recalee"<<endl;
     
-    TranslationType::Pointer finalTsl = TranslationType::New();
-    finalTsl->SetParameters(finalParameters);
-    finalTsl->SetFixedParameters(transform->GetFixedParameters());
+    //TranslationType::Pointer finalTsl = TranslationType::New();
+    TransformType::Pointer finalTsf = TransformType::New();
+    
+    finalTsf->SetParameters(finalParameters);
+    finalTsf->SetFixedParameters(registration->GetTransform()->GetFixedParameters());
     
     ResampleFilterType::Pointer resampler = ResampleFilterType::New();
-    resampler->SetTransform(finalTsl);
-    resampler->SetInput(rescaled_IRM);
-    resampler->SetOutputDirection(rescaled_IRM->GetDirection());
-    resampler->SetSize(rescaled_IRM->GetLargestPossibleRegion().GetSize());
-    resampler->SetOutputSpacing(rescaled_IRM->GetSpacing());
-//    ImageType::PointType origine = rescaled_IRM->GetOrigin();
-//    origine[0] = origine[0] - TX;
-//    origine[1] = origine[1] - TY;
-//    origine[2] = origine[2] - TZ;
-    resampler->SetOutputOrigin(finalTsl->GetInverseTransform()->TransformPoint(rescaled_IRM->GetOrigin()));
-    resampler->SetDefaultPixelValue(0);
-    
+    resampler->SetTransform(finalTsf);
+    resampler->SetInput(image_US);
+    resampler->SetOutputDirection(finalTsf->GetInverseMatrix()*image_US->GetDirection());
+    resampler->SetSize(image_US->GetLargestPossibleRegion().GetSize());
+    resampler->SetOutputSpacing(image_US->GetSpacing());
+    resampler->SetOutputOrigin(finalTsf->GetInverseTransform()->TransformPoint(image_US->GetOrigin()));
+  
     ImageType::Pointer outputImage = ImageType::New();
     outputImage = resampler->GetOutput();
     
     WriterType::Pointer writer7 = WriterType::New();
-    string out7 ="/Users/maximegerard/Documents/finalregistreredIRM.nii.gz";
+    string out7 ="/Users/maximegerard/Documents/finalregistreredUS.nii.gz";
     writer7->SetImageIO(io);
     writer7->SetInput(outputImage);
     writer7->SetFileName(out7);
@@ -529,70 +546,6 @@ int main(int argc, const char * argv[]) {
         return EXIT_FAILURE;
     }
     
-    
-    
-    
-////    
-//    //TEST METRIC LC2
-//   // cout<<"test metric"<<endl;
-//    LC2MetricType::Pointer metric = LC2MetricType::New();
-//    metric->SetFixed(US_shrunk);
-//    metric->ComputeMask();
-//    
-////TEST FORCE BRUTE
-//    cout<<"test force brute"<<endl;
-//    ResampleFilterType::Pointer resamplefilter = ResampleFilterType::New();
-//    resamplefilter->SetInput(rescaled_IRM);
-//    resamplefilter->SetOutputSpacing(rescaled_IRM->GetSpacing());
-//    resamplefilter->SetSize(rescaled_IRM->GetLargestPossibleRegion().GetSize());
-//    resamplefilter->SetOutputDirection(rescaled_IRM->GetDirection());
-//    ImageType::PointType origine = rescaled_IRM->GetOrigin();
-//    
-//    TranslationType::Pointer trsl = TranslationType::New();
-//    //TranslationType::OutputVectorType slide;
-//    TranslationType::ParametersType slide= trsl->GetParameters();
-//    slide[0]=0;
-//    slide[1]=10;
-//    slide[2]=0;
-//    //trsl->Translate(slide);
-//    trsl->SetParameters(slide);
-//    
-//    resamplefilter->SetTransform(trsl->GetInverseTransform());
-////    origine[0] = origine[0] - slide[0];
-////    origine[1] = origine[1] - slide[1];
-////    origine[2] = origine[2] - slide[2];
-//    
-////    cout<<"test methode tsf point"<<endl;
-////    cout<<"origine tsf a l'ancienne : "<<origine<<endl;
-//    ImageType::PointType or2 = trsl->TransformPoint(rescaled_IRM->GetOrigin());
-//    cout<<"origine avec tsf point : "<<or2<<endl;
-//    resamplefilter->SetOutputOrigin(or2);
-//    try {
-//            resamplefilter->Update();
-//        } catch (itk::ExceptionObject &e) {
-//            cerr<<"error while translating image"<<endl;
-//            cerr<<e<<endl;
-//            return EXIT_FAILURE;
-//        }
-//        
-//        ImageType::Pointer result = resamplefilter->GetOutput();
-//        //metric->SetMoving(result);
-//        //metric->test();
-//    
-//        WriterType::Pointer writer7 = WriterType::New();
-//        string out7 ="/Users/maximegerard/Documents/tslIRM.nii.gz";
-//        writer7->SetImageIO(io);
-//        writer7->SetInput(result);
-//        writer7->SetFileName(out7);
-//        try {
-//            writer7->Update();
-//        } catch (itk::ExceptionObject &e) {
-//            cerr<<"error whilte writing registered image"<<endl;
-//            cerr<<e<<endl;
-//            return EXIT_FAILURE;
-//        }
-//    
-//    cout<<"done writing translation image"<<endl;
     
     
     

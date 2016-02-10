@@ -39,6 +39,11 @@
 #include <vector>
 #include "itkResampleImageFilter.h"
 #include "itkTranslationTransform.h"
+#include "itkEuler3DTransform.h"
+#include "itkShrinkImageFilter.h"
+#include "itkHessian3DToVesselnessMeasureImageFilter.h"
+#include "itkSymmetricSecondRankTensor.h"
+#include "itkMultiScaleHessianBasedMeasureImageFilter.h"
 
 
 
@@ -89,13 +94,13 @@ public:
   typedef Vector<double,3> PType;
     
     //for gradient computation
-    typedef GradientMagnitudeImageFilter<TMovingImage, TMovingImage> GradientFilterType;
-    typedef ImageFileWriter<TMovingImage> WriterType;
+    typedef GradientMagnitudeImageFilter<TFixedImage, TFixedImage> GradientFilterType;
+    typedef ImageFileWriter<TFixedImage> WriterType;
     
     //mask for MRI
     typedef Image<unsigned char, 3> MaskType;
     typedef ImageFileWriter<MaskType> BinaryWriterType;
-    typedef BinaryThresholdImageFilter<TFixedImage, MaskType> BinaryThresholdFilterType;
+    typedef BinaryThresholdImageFilter<TMovingImage, MaskType> BinaryThresholdFilterType;
  
     
     typedef FlatStructuringElement<3> kernelType;
@@ -110,16 +115,27 @@ public:
     
     //image iterator
   
-    typedef NeighborhoodIterator<TFixedImage> NeighborhoodIteratorType;
-    typedef ImageRegionConstIterator<TFixedImage> ImageConstIteratorType;
-    typedef ImageRegionIterator<TFixedImage> ImageIteratorType;
+    typedef NeighborhoodIterator<TMovingImage> NeighborhoodIteratorType;
+    typedef ImageRegionConstIterator<TMovingImage> ImageConstIteratorType;
+    typedef ImageRegionIterator<TMovingImage> ImageIteratorType;
+    typedef ImageRegionIterator<MaskType> BinaryImageIteratorType;
     
     //interpolator
     typedef LinearInterpolateImageFunction<TMovingImage,double> LinearInterpolatorType;
     
+    //vesselness filtering
+    typedef itk::SymmetricSecondRankTensor<double,3> HessianPixelType;
+    typedef itk::Image<HessianPixelType,3> HessianImageType;
+    typedef itk::Hessian3DToVesselnessMeasureImageFilter<double> VesselnessMeasureFilterType;
+    typedef itk::MultiScaleHessianBasedMeasureImageFilter<ImageType, HessianImageType,ImageType> MultiScaleEnhancementFilterType;
+    
     //for image tsf
     typedef TranslationTransform<double,3> TranslationTransformType;
+    typedef Euler3DTransform<double> EulerTransformType;
     typedef ResampleImageFilter<TMovingImage, TMovingImage> ResamplerType;
+    typedef ResampleImageFilter<MaskType, MaskType> ResamplerBinaryType;
+    typedef ShrinkImageFilter<TMovingImage, TMovingImage> ShrinkFilterType;
+    typedef ShrinkImageFilter<MaskType, MaskType> BinaryShrinkFilterType;
 
   /** Get the derivatives of the match measure. */
   void GetDerivative(const TransformParametersType & parameters,
@@ -133,7 +149,7 @@ public:
   void GetValueAndDerivative(const TransformParametersType & parameters,
                              MeasureType & Value, DerivativeType & Derivative) const ITK_OVERRIDE;
   
-    double test();
+    double test(const TransformParametersType &parameters);
     
 
   void ComputeMask();
@@ -147,8 +163,11 @@ public:
   //itkBooleanMacro(SubtractMean);
     
   void SetImages(typename TFixedImage::Pointer US,typename TMovingImage::Pointer IRM);
-  void SetFixed(typename TFixedImage::Pointer US);
-  void SetMoving(typename TMovingImage::Pointer IRM);
+  void SetFixed(typename TFixedImage::Pointer IRM);
+  void SetMoving(typename TMovingImage::Pointer US);
+    
+    void ComputeGradImage();
+    void ComputeVesselnessImage();
 
 
 protected:
@@ -167,6 +186,8 @@ private:
   double variancesum;
   double lc2varsum;
   MaskType::Pointer m_mask;
+  typename TFixedImage::Pointer m_grad;
+  typename TFixedImage::Pointer m_vesselness;
 
 
 
