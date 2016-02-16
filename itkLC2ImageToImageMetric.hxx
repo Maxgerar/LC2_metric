@@ -73,15 +73,15 @@ template<typename TFixedImage, typename TMovingImage>
     void
     LC2ImageToImageMetric<TFixedImage,TMovingImage>::ComputeGradImage()
     {
-        cout<<"compute gradient image of fixed MRI image"<<endl;
+        std::cout<<"compute gradient image of fixed MRI image"<<std::endl;
         
         typename GradientFilterType::Pointer filterG = GradientFilterType::New();
         filterG->SetInput(this->m_FixedImage);
         try {
             filterG->Update();
         } catch (itk::ExceptionObject &e) {
-            cerr<<"error while computing gradient image"<<endl;
-            cerr<<e<<endl;
+            std::cerr<<"error while computing gradient image"<<std::endl;
+            std::cerr<<e<<std::endl;
             EXIT_FAILURE;
         }
         
@@ -116,7 +116,7 @@ template<typename TFixedImage, typename TMovingImage>
     void
     LC2ImageToImageMetric<TFixedImage,TMovingImage>::ComputeVesselnessImage()
     {
-        cout<<"compute vesselness image of fixed MRI image"<<endl;
+        std::cout<<"compute vesselness image of fixed MRI image"<<std::endl;
         
         typename MultiScaleEnhancementFilterType::Pointer multiScaleFilter = MultiScaleEnhancementFilterType::New();
         multiScaleFilter->SetInput(this->m_FixedImage);
@@ -133,8 +133,8 @@ template<typename TFixedImage, typename TMovingImage>
         try {
             multiScaleFilter->Update();
         } catch (itk::ExceptionObject & e) {
-            cerr<<"error while computing vesselness image"<<endl;
-            cerr<<e<<endl;
+            std::cerr<<"error while computing vesselness image"<<std::endl;
+            std::cerr<<e<<std::endl;
         }
         
         m_vesselness = multiScaleFilter->GetOutput();
@@ -143,18 +143,18 @@ template<typename TFixedImage, typename TMovingImage>
         
         typename WriterType::Pointer writer10 = WriterType::New();
         itk::NiftiImageIO::Pointer io = itk::NiftiImageIO::New();
-        string out10 = "/Users/maximegerard/Documents/testVesselness.nii.gz";
+        std::string out10 = "/Users/maximegerard/Documents/testVesselness.nii.gz";
         writer10->SetImageIO(io);
         writer10->SetInput(m_vesselness);
         writer10->SetFileName(out10);
         try {
             writer10->Update();
         } catch (itk::ExceptionObject &e) {
-            cerr<<"error while writing Vesselness image"<<endl;
-            cerr<<e<<endl;
+            std::cerr<<"error while writing Vesselness image"<<std::endl;
+            std::cerr<<e<<std::endl;
         }
         
-        cout<<"done writing vesselness image"<<endl;
+        std::cout<<"done writing vesselness image"<<std::endl;
         
     }
     
@@ -167,7 +167,7 @@ template<typename TFixedImage, typename TMovingImage>
     void
     LC2ImageToImageMetric<TFixedImage, TMovingImage>::ComputeMask()
     {
-        cout<<"computing cropping mask"<<endl;
+        std::cout<<"computing cropping mask"<<std::endl;
         //binarisation
         
         typename BinaryThresholdFilterType::Pointer thresholder = BinaryThresholdFilterType::New();
@@ -180,16 +180,16 @@ template<typename TFixedImage, typename TMovingImage>
         try {
             thresholder->Update();
         } catch (itk::ExceptionObject &e) {
-            cerr<<"error while binarizing US image"<<endl;
-            cerr<<e<<endl;
+            std::cerr<<"error while binarizing US image"<<std::endl;
+            std::cerr<<e<<std::endl;
         }
        
         MaskType::Pointer mask1 =thresholder->GetOutput() ;
       
         
-        cout<<"done writing initial mask image"<<endl;
+        std::cout<<"done writing initial mask image"<<std::endl;
         
-        cout<<"test closing"<<endl;
+        std::cout<<"test closing"<<std::endl;
          //operation morphologiques
         
 
@@ -197,8 +197,8 @@ template<typename TFixedImage, typename TMovingImage>
         radius.Fill(3);
        
         kernelType kernel = kernelType::Ball(radius);
-        cout<<"radius kernel : "<<kernel.GetRadius()<<endl;
-        cout<<"kernel size : "<<kernel.GetSize()<<endl;
+        std::cout<<"radius kernel : "<<kernel.GetRadius()<<std::endl;
+        std::cout<<"kernel size : "<<kernel.GetSize()<<std::endl;
         
         CloserType::Pointer closer = CloserType::New();
         closer->SetInput(mask1);
@@ -210,7 +210,7 @@ template<typename TFixedImage, typename TMovingImage>
         //writing mask images
         
         BinaryWriterType::Pointer writer3 = BinaryWriterType::New();
-        string out3 = "/Users/maximegerard/Documents/testmask.nii.gz";
+        std::string out3 = "/Users/maximegerard/Documents/testmask.nii.gz";
         itk::NiftiImageIO::Pointer io = itk::NiftiImageIO::New();
         writer3->SetInput(m_mask);
         writer3->SetImageIO(io);
@@ -218,12 +218,12 @@ template<typename TFixedImage, typename TMovingImage>
         try {
             writer3->Update();
         } catch (itk::ExceptionObject &e) {
-            cerr<<"error while writing image file"<<endl;
-            cerr<<e<<endl;
+            std::cerr<<"error while writing image file"<<std::endl;
+            std::cerr<<e<<std::endl;
             EXIT_FAILURE;
         }
 //
-        cout<<"done writing final mask image"<<endl;
+        std::cout<<"done writing final mask image"<<std::endl;
 
         
     }
@@ -262,15 +262,15 @@ double
         
         //gradient IRM
         
-        cout<<"compute gradient of MRI image"<<endl;
+        std::cout<<"compute gradient of MRI image"<<std::endl;
         
         typename GradientFilterType::Pointer filterG = GradientFilterType::New();
         filterG->SetInput(fixedImage);
         try {
             filterG->Update();
         } catch (itk::ExceptionObject &e) {
-            cerr<<"error while computing gradient image"<<endl;
-            cerr<<e<<endl;
+            std::cerr<<"error while computing gradient image"<<std::endl;
+            std::cerr<<e<<std::endl;
             EXIT_FAILURE;
         }
         
@@ -292,7 +292,7 @@ double
 //            EXIT_FAILURE;
 //        }
 
-        cout<<"done writing gradient image"<<endl;
+        std::cout<<"done writing gradient image"<<std::endl;
         
 //        ///////////////////////////////////////
 //        //CROPPING CONSIDERING MRI POSITION //
@@ -542,9 +542,9 @@ double
         
         tsf->SetFixedParameters(eulerFixedParameters);
         
-        cout<<"euler parameters in test function : "<<endl;
-        cout<<"optimizable param : "<<tsf->GetParameters()<<endl;
-        cout<<" fixed param : "<<tsf->GetFixedParameters()<<endl;
+        std::cout<<"euler parameters in test function : "<<std::endl;
+        std::cout<<"optimizable param : "<<tsf->GetParameters()<<std::endl;
+        std::cout<<" fixed param : "<<tsf->GetFixedParameters()<<std::endl;
         
         //transformation du mask
         ResamplerBinaryType::Pointer maskResampler = ResamplerBinaryType::New();
@@ -558,8 +558,8 @@ double
         try {
             maskResampler->Update();
         } catch (itk::ExceptionObject &e) {
-            cerr<<"error while translating image"<<endl;
-            cerr<<e<<endl;
+            std::cerr<<"error while translating image"<<std::endl;
+            std::cerr<<e<<std::endl;
             return EXIT_FAILURE;
         }
         
@@ -579,7 +579,7 @@ double
 //            return EXIT_FAILURE;
 //        }
         
-        cout<<"done writing transformed mask"<<endl;
+        std::cout<<"done writing transformed mask"<<std::endl;
         
         //DOWN SAMPLING LE MASK
         
@@ -591,13 +591,13 @@ double
         try {
             binaryShrink->Update();
         } catch (itk::ExceptionObject &e) {
-            cerr<<"error while downsampling US image"<<endl;
-            cerr<<e<<endl;
+            std::cerr<<"error while downsampling US image"<<std::endl;
+            std::cerr<<e<<std::endl;
             return EXIT_FAILURE;
         }
         
         MaskType::Pointer mask_shrunk = binaryShrink->GetOutput();
-        cout<<"taille mask basse res : "<<mask_shrunk->GetLargestPossibleRegion().GetSize()<<endl;
+        std::cout<<"taille mask basse res : "<<mask_shrunk->GetLargestPossibleRegion().GetSize()<<std::endl;
         
         
         //Cropping considerant le zone non nulle de l'US
@@ -657,10 +657,10 @@ double
             
         }
         
-        cout<<"indices minimum X,Y,Z "<<endl;
-        cout<<"X : "<<indMinX<<" "<<indMaxX<<endl;
-        cout<<"Y : "<<indMinY<<" "<<indMaxY<<endl;
-        cout<<"Z : "<<indMinZ<<" "<<indMaxZ<<endl;
+        std::cout<<"indices minimum X,Y,Z "<<std::endl;
+        std::cout<<"X : "<<indMinX<<" "<<indMaxX<<std::endl;
+        std::cout<<"Y : "<<indMinY<<" "<<indMaxY<<std::endl;
+        std::cout<<"Z : "<<indMinZ<<" "<<indMaxZ<<std::endl;
         
         typename TMovingImage::IndexType startCropped;
         startCropped[0] = indMinX ;
@@ -693,7 +693,7 @@ double
         CroppingFilter->SetDirectionCollapseToIdentity();
         CroppingFilter->Update();
         typename TMovingImage::Pointer moving_Cropped = CroppingFilter->GetOutput();
-        cout<<"verification image size : "<<moving_Cropped->GetLargestPossibleRegion().GetSize()<<endl;
+        std::cout<<"verification image size : "<<moving_Cropped->GetLargestPossibleRegion().GetSize()<<std::endl;
         
 //        //writing to verify
 //        typename WriterType::Pointer writer4 = WriterType::New();
@@ -709,7 +709,7 @@ double
 //            cerr<<e<<endl;
 //        }
         
-        cout<<"done cropping image"<<endl;
+        std::cout<<"done cropping image"<<std::endl;
         
 //        //DOWNSAMPLING US ET MASK
 //        ShrinkFilterType::Pointer shrinkFilter = ShrinkFilterType::New();
@@ -734,7 +734,7 @@ double
         //////////////////////////////////////////
         // REGION ACCESSIBLE POUR NEIGHBORHOOD //
         ////////////////////////////////////////
-        cout<<"defining accessible region of image"<<endl;
+        std::cout<<"defining accessible region of image"<<std::endl;
         //on itere sur toute l'image accessible -> celle pour laquelle le neighboorhood it ne va pas sortir de l'image
         typename TMovingImage::RegionType accessibleImagePart;
         typename TMovingImage::RegionType::IndexType startIndex = moving_Cropped->GetLargestPossibleRegion().GetIndex();//moving_Cropped->GetLargestPossibleRegion().GetIndex();
@@ -749,8 +749,8 @@ double
         
         accessibleImagePart.SetIndex(startIndex);
         accessibleImagePart.SetSize(sizeAccessible);
-        cout<<" start index region accessible : "<<startIndex<<endl;
-        cout<<"taille region accessible : "<<accessibleImagePart.GetSize()<<endl;
+        std::cout<<" start index region accessible : "<<startIndex<<std::endl;
+        std::cout<<"taille region accessible : "<<accessibleImagePart.GetSize()<<std::endl;
         
         
         //TEST IMAGE ITERATOR RATHER THAN NITERATOR
@@ -765,7 +765,7 @@ double
         US_it.GoToBegin();
         
 
-        cout<<"calcul de la lc2"<<endl;
+        std::cout<<"calcul de la lc2"<<std::endl;
         
         //to determine time of computation for lc2
         std::srand(time(NULL));
@@ -929,11 +929,11 @@ double
                         // c = (M^T*M)^-1 * M^T*U
                         param = MTM*M.GetTranspose()*U;
                     } catch (itk::ExceptionObject &e) {
-                        cerr<<"Matrix det is null"<<endl;
-                        cerr<<e<<endl;
+                        std::cerr<<"Matrix det is null"<<std::endl;
+                        std::cerr<<e<<std::endl;
                         //cerr<<"spatial position of center of neighbourhood"<<p<<endl;
-                        cerr<<"matric M"<<M<<endl;
-                        cerr<<"metrice MTM"<<MTM<<endl;
+                        std::cerr<<"matric M"<<M<<std::endl;
+                        std::cerr<<"metrice MTM"<<MTM<<std::endl;
                         //ici c'est pcq ce sont des patchs unifomrme qu'il y a erreur ?
                         param[0] = 1 ;
                         param[1] = 0;
@@ -967,9 +967,9 @@ double
                 }
                 else
                 {
-                    cout<<"variance on patch is null"<<endl;
+                    std::cout<<"variance on patch is null"<<std::endl;
                     //cout<<"neighbourhood voxel center : "<<p<<endl;
-                    cout<<U<<endl;
+                    std::cout<<U<<std::endl;
                     lc2 = 0;
                     
                 }
@@ -988,17 +988,17 @@ double
 
         }
         
-        cout<<"done parcours image US"<<endl;
+        std::cout<<"done parcours image US"<<std::endl;
         tend = std::time(NULL);
         texec = std::difftime(tend,tbegin);
         
-        cout<<"temps de parcours en s : "<<texec<<endl;
+        std::cout<<"temps de parcours en s : "<<texec<<std::endl;
         
     //lc2 finale = moyenne ponderee
         
    
     m_lc2final = lc2varsum/variancesum;
-        cout<<"lc2 globale : "<<m_lc2final<<endl;
+        std::cout<<"lc2 globale : "<<m_lc2final<<std::endl;
 
         return m_lc2final;
 
@@ -1046,7 +1046,7 @@ LC2ImageToImageMetric<TFixedImage, TMovingImage>
  
     EulerTransformType::Pointer transform = EulerTransformType::New();
     transform->SetParameters(parameters);
-    cout<<"euler tsf parameters : "<<transform->GetParameters()<<endl;
+    std::cout<<"euler tsf parameters : "<<transform->GetParameters()<<std::endl;
     
     typename TMovingImage::SizeType sizeUS = movingImage->GetLargestPossibleRegion().GetSize();
     typename TMovingImage::PointType origin = movingImage->GetOrigin();
@@ -1063,7 +1063,7 @@ LC2ImageToImageMetric<TFixedImage, TMovingImage>
     eulerFixedParameters[2] =center[2];
     
     transform->SetFixedParameters(eulerFixedParameters);
-    cout<<"tsf fixed param : "<<transform->GetFixedParameters()<<endl;
+    std::cout<<"tsf fixed param : "<<transform->GetFixedParameters()<<std::endl;
     
    
     
@@ -1079,8 +1079,8 @@ LC2ImageToImageMetric<TFixedImage, TMovingImage>
     try {
         resamplefilter->Update();
     } catch (itk::ExceptionObject &e) {
-        cerr<<"error while transforming moving image"<<endl;
-        cerr<<e<<endl;
+        std::cerr<<"error while transforming moving image"<<std::endl;
+        std::cerr<<e<<std::endl;
         return EXIT_FAILURE;
     }
     
@@ -1096,8 +1096,8 @@ LC2ImageToImageMetric<TFixedImage, TMovingImage>
     try {
         shrinkFilter->Update();
     } catch (itk::ExceptionObject &e) {
-        cerr<<"error while downsampling transormed us"<<endl;
-        cerr<<e<<endl;
+        std::cerr<<"error while downsampling transormed us"<<std::endl;
+        std::cerr<<e<<std::endl;
         return EXIT_FAILURE;
     }
     
@@ -1119,8 +1119,8 @@ LC2ImageToImageMetric<TFixedImage, TMovingImage>
     try {
         maskResampler->Update();
     } catch (itk::ExceptionObject &e) {
-        cerr<<"error while translating image"<<endl;
-        cerr<<e<<endl;
+        std::cerr<<"error while translating image"<<std::endl;
+        std::cerr<<e<<std::endl;
         return EXIT_FAILURE;
     }
     
@@ -1136,8 +1136,8 @@ LC2ImageToImageMetric<TFixedImage, TMovingImage>
     try {
         binaryShrink->Update();
     } catch (itk::ExceptionObject &e) {
-        cerr<<"error while downsampling US image"<<endl;
-        cerr<<e<<endl;
+        std::cerr<<"error while downsampling US image"<<std::endl;
+        std::cerr<<e<<std::endl;
         return EXIT_FAILURE;
     }
     
@@ -1200,10 +1200,10 @@ LC2ImageToImageMetric<TFixedImage, TMovingImage>
         
     }
     
-    cout<<"indices minimum X,Y,Z "<<endl;
-    cout<<"X : "<<indMinX<<" "<<indMaxX<<endl;
-    cout<<"Y : "<<indMinY<<" "<<indMaxY<<endl;
-    cout<<"Z : "<<indMinZ<<" "<<indMaxZ<<endl;
+    std::cout<<"indices minimum X,Y,Z "<<std::endl;
+    std::cout<<"X : "<<indMinX<<" "<<indMaxX<<std::endl;
+    std::cout<<"Y : "<<indMinY<<" "<<indMaxY<<std::endl;
+    std::cout<<"Z : "<<indMinZ<<" "<<indMaxZ<<std::endl;
     
     typename TMovingImage::IndexType startCropped;
     startCropped[0] = indMinX ;
@@ -1236,7 +1236,7 @@ LC2ImageToImageMetric<TFixedImage, TMovingImage>
     CroppingFilter->SetDirectionCollapseToIdentity();
     CroppingFilter->Update();
     typename TMovingImage::Pointer moving_Cropped = CroppingFilter->GetOutput();
-    cout<<"verification image size : "<<moving_Cropped->GetLargestPossibleRegion().GetSize()<<endl;
+    std::cout<<"verification image size : "<<moving_Cropped->GetLargestPossibleRegion().GetSize()<<std::endl;
     
     //        //writing to verify
     //        typename WriterType::Pointer writer4 = WriterType::New();
@@ -1261,7 +1261,7 @@ LC2ImageToImageMetric<TFixedImage, TMovingImage>
     //////////////////////////////////////////
     // REGION ACCESSIBLE POUR NEIGHBORHOOD //
     ////////////////////////////////////////
-    cout<<"defining accessible region of image"<<endl;
+    std::cout<<"defining accessible region of image"<<std::endl;
     //on itere sur toute l'image accessible -> celle pour laquelle le neighboorhood it ne va pas sortir de l'image
     typename TMovingImage::RegionType accessibleImagePart;
     typename TMovingImage::RegionType::IndexType startIndex = moving_Cropped->GetLargestPossibleRegion().GetIndex();
@@ -1276,8 +1276,8 @@ LC2ImageToImageMetric<TFixedImage, TMovingImage>
     
     accessibleImagePart.SetIndex(startIndex);
     accessibleImagePart.SetSize(sizeAccessible);
-    cout<<" start index region accessible : "<<startIndex<<endl;
-    cout<<"taille region accessible : "<<accessibleImagePart.GetSize()<<endl;
+    std::cout<<" start index region accessible : "<<startIndex<<std::endl;
+    std::cout<<"taille region accessible : "<<accessibleImagePart.GetSize()<<std::endl;
     
     
     //TEST IMAGE ITERATOR RATHER THAN NITERATOR
@@ -1292,7 +1292,7 @@ LC2ImageToImageMetric<TFixedImage, TMovingImage>
     US_it.GoToBegin();
     
     
-    cout<<"calcul de la lc2"<<endl;
+    std::cout<<"calcul de la lc2"<<std::endl;
     
     //to determine time of computation for lc2
     std::srand(time(NULL));
@@ -1458,11 +1458,11 @@ LC2ImageToImageMetric<TFixedImage, TMovingImage>
                 // c = (M^T*M)^-1 * M^T*U
                 param = MTM*M.GetTranspose()*U;
             } catch (itk::ExceptionObject &e) {
-                cerr<<"Matrix det is null"<<endl;
-                cerr<<e<<endl;
+                std::cerr<<"Matrix det is null"<<std::endl;
+                std::cerr<<e<<std::endl;
                // cerr<<"spatial position of center of neighbourhood"<<p<<endl;
-                cerr<<"matric M"<<M<<endl;
-                cerr<<"metrice MTM"<<MTM<<endl;
+                std::cerr<<"matric M"<<M<<std::endl;
+                std::cerr<<"metrice MTM"<<MTM<<std::endl;
                 //ici c'est pcq ce sont des patchs unifomrme qu'il y a erreur ?
                 param[0] = 1 ;
                 param[1] = 0;
@@ -1496,9 +1496,9 @@ LC2ImageToImageMetric<TFixedImage, TMovingImage>
             }
             else
             {
-                cout<<"variance on patch is null"<<endl;
+                std::cout<<"variance on patch is null"<<std::endl;
                 //cout<<"neighbourhood voxel center : "<<p<<endl;
-                cout<<U<<endl;
+                std::cout<<U<<std::endl;
                 lc2 = 0;
                 
             }
@@ -1516,17 +1516,17 @@ LC2ImageToImageMetric<TFixedImage, TMovingImage>
         
     }
     
-    cout<<"done parcours image US"<<endl;
+    std::cout<<"done parcours image US"<<std::endl;
     tend = std::time(NULL);
     texec = std::difftime(tend,tbegin);
     
-    cout<<"temps de parcours en s : "<<texec<<endl;
+    std::cout<<"temps de parcours en s : "<<texec<<std::endl;
     
     //lc2 finale = moyenne ponderee
     
     
     double lc2final = lc2varsum2/variancesum2;
-    cout<<"lc2 globale : "<<lc2final<<endl;
+    std::cout<<"lc2 globale : "<<lc2final<<std::endl;
     
 
  
