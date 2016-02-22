@@ -99,19 +99,19 @@ void LC2_function::computeMask()
     
     //writing mask images
     
-    BinaryWriterType::Pointer writer3 = BinaryWriterType::New();
-    std::string out3 = "/Users/maximegerard/Documents/testmask.nii.gz";
-    itk::NiftiImageIO::Pointer io = itk::NiftiImageIO::New();
-    writer3->SetInput(m_mask);
-    writer3->SetImageIO(io);
-    writer3->SetFileName(out3);
-    try {
-        writer3->Update();
-    } catch (itk::ExceptionObject &e) {
-        std::cerr<<"error while writing image file"<<std::endl;
-        std::cerr<<e<<std::endl;
-        EXIT_FAILURE;
-    }
+//    BinaryWriterType::Pointer writer3 = BinaryWriterType::New();
+//    std::string out3 = "/Users/maximegerard/Documents/testmask.nii.gz";
+//    itk::NiftiImageIO::Pointer io = itk::NiftiImageIO::New();
+//    writer3->SetInput(m_mask);
+//    writer3->SetImageIO(io);
+//    writer3->SetFileName(out3);
+//    try {
+//        writer3->Update();
+//    } catch (itk::ExceptionObject &e) {
+//        std::cerr<<"error while writing image file"<<std::endl;
+//        std::cerr<<e<<std::endl;
+//        EXIT_FAILURE;
+//    }
     //
     std::cout<<"done writing final mask image"<<std::endl;
 

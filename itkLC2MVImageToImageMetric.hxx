@@ -32,7 +32,7 @@ template <typename TFixedImage, typename TMovingImage>
 LC2MVImageToImageMetric<TFixedImage, TMovingImage>
 ::LC2MVImageToImageMetric()
 {
-    m_numberofValues = 10000;
+    m_numberofValues = 10;
     //m_Transform = EulerTransformType::New();
   
 }

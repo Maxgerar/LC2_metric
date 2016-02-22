@@ -117,15 +117,17 @@ public:
         
         //transformation with regard to TransformParameters
         
+        //cout<<"verif param : "<<params<<endl;
+        
         EulerTransformType::Pointer transform = EulerTransformType::New();
         EulerTransformType::ParametersType parameters(6);
         //mise a l'echelle des parametres
-        parameters[0] = params(0)*5;
-        parameters[1] = params(1)*5;
-        parameters[2] = params(2)*5;
-        parameters[3] = params(3)*100;
-        parameters[4] = params(4)*100;
-        parameters[5] = params(5)*100;
+        parameters[0] = params(0)*5/9;
+        parameters[1] = params(1)*5/9;
+        parameters[2] = params(2)*5/9;
+        parameters[3] = params(3)*100/9;
+        parameters[4] = params(4)*100/9;
+        parameters[5] = params(5)*100/9;
         transform->SetParameters(parameters);
         std::cout<<"euler tsf parameters : "<<transform->GetParameters()<<std::endl;
         
@@ -608,6 +610,7 @@ public:
         
         double lc2final = lc2varsum2/variancesum2;
         std::cout<<"lc2 globale : "<<lc2final<<std::endl;
+        std::cout << std::endl << std::endl;
         
         
         

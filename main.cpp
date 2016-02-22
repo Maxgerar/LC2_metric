@@ -66,7 +66,7 @@ typedef itk::ImageFileWriter<ImageType> WriterType;
 typedef itk::ImageRegionIterator<ImageType> IteratorType;
 
 //recalage
-typedef itk::AmoebaOptimizer OptimizerType;
+typedef itk::AmoebaOptimizer AmoebaOptimizerType;
 typedef itk::LevenbergMarquardtOptimizer LMOptimizerType;
 typedef itk::LinearInterpolateImageFunction<ImageType,double> InterpolatorType;
 typedef itk::ImageRegistrationMethod<ImageType, ImageType> RegistrationType;
@@ -90,77 +90,78 @@ typedef itk::ShrinkImageFilter<ImageType, ImageType> ShrinkFilterType;
 
 using namespace std;
 
-class CommandIterationUpdate : public itk::Command
-{
-public:
-    typedef CommandIterationUpdate  Self;
-    typedef itk::Command            Superclass;
-    typedef itk::SmartPointer<Self> Pointer;
-    itkNewMacro( Self );
-protected:
-    CommandIterationUpdate() {};
-public:
-    typedef itk::LevenbergMarquardtOptimizer     OptimizerType;
-    typedef const OptimizerType *                OptimizerPointer;
-    void Execute(itk::Object *caller, const itk::EventObject & event) ITK_OVERRIDE
-    {
-        Execute( (const itk::Object *)caller, event);
-    }
-    void Execute(const itk::Object * object, const itk::EventObject & event) ITK_OVERRIDE
-    {
-        OptimizerPointer optimizer = dynamic_cast< OptimizerPointer >( object );
-        if( optimizer == ITK_NULLPTR )
-        {
-            itkExceptionMacro( "Could not cast optimizer." );
-        }
-        if( ! itk::IterationEvent().CheckEvent( &event ) )
-        {
-            return;
-        }
-        //std::cout << "Value = " << optimizer->GetCachedValue() << std::endl;
-        std::cout << "Position = "  << optimizer->GetCachedCurrentPosition();
-        std::cout << std::endl << std::endl;
-    }
-};
-
-////classe pour suivre le recalage
 //class CommandIterationUpdate : public itk::Command
 //{
-//public :
-//    typedef CommandIterationUpdate Self;
-//    typedef itk::Command SuperClass;
-//    typedef itk::SmartPointer<Self> Pointer;
-//    itkNewMacro(Self);
-//    
-//protected:
-//    CommandIterationUpdate()
-//    {
-//        m_IterationNumber =0;
-//    }
 //public:
-//    typedef itk::AmoebaOptimizer OptimizerType;
-//    typedef const OptimizerType * OptimizerPointer;
-//    
-//    void Execute(itk::Object *caller, const itk::EventObject &event) ITK_OVERRIDE
+//    typedef CommandIterationUpdate  Self;
+//    typedef itk::Command            Superclass;
+//    typedef itk::SmartPointer<Self> Pointer;
+//    itkNewMacro( Self );
+//protected:
+//    CommandIterationUpdate() {};
+//public:
+//    typedef itk::LevenbergMarquardtOptimizer     OptimizerType;
+//    typedef const OptimizerType *                OptimizerPointer;
+//    void Execute(itk::Object *caller, const itk::EventObject & event) ITK_OVERRIDE
 //    {
 //        Execute( (const itk::Object *)caller, event);
 //    }
-//    
-//    void Execute(const itk::Object * object,
-//                 const itk::EventObject & event) ITK_OVERRIDE
+//    void Execute(const itk::Object * object, const itk::EventObject & event) ITK_OVERRIDE
 //    {
-//        OptimizerPointer optimizer = static_cast< OptimizerPointer >( object );
+//        OptimizerPointer optimizer = dynamic_cast< OptimizerPointer >( object );
+//        if( optimizer == ITK_NULLPTR )
+//        {
+//            itkExceptionMacro( "Could not cast optimizer." );
+//        }
 //        if( ! itk::IterationEvent().CheckEvent( &event ) )
 //        {
 //            return;
 //        }
-//        std::cout << m_IterationNumber++ << "   "<<endl;
-//        std::cout << optimizer->GetCachedValue() << "   "<<endl;
-//        std::cout << optimizer->GetCachedCurrentPosition() << std::endl;
+//        //std::cout << "Value = " << optimizer->GetCachedValue() << std::endl;
+//        std::cout<< "observer information : "<<std::endl;
+//        std::cout << "Position = "  << optimizer->GetCachedCurrentPosition();
+//        std::cout << std::endl << std::endl;
 //    }
-//private:
-//    unsigned long m_IterationNumber;
 //};
+
+//classe pour suivre le recalage
+class CommandIterationUpdate : public itk::Command
+{
+public :
+    typedef CommandIterationUpdate Self;
+    typedef itk::Command SuperClass;
+    typedef itk::SmartPointer<Self> Pointer;
+    itkNewMacro(Self);
+    
+protected:
+    CommandIterationUpdate()
+    {
+        m_IterationNumber =0;
+    }
+public:
+    typedef itk::AmoebaOptimizer OptimizerType;
+    typedef const OptimizerType * OptimizerPointer;
+    
+    void Execute(itk::Object *caller, const itk::EventObject &event) ITK_OVERRIDE
+    {
+        Execute( (const itk::Object *)caller, event);
+    }
+    
+    void Execute(const itk::Object * object,
+                 const itk::EventObject & event) ITK_OVERRIDE
+    {
+        OptimizerPointer optimizer = static_cast< OptimizerPointer >( object );
+        if( ! itk::IterationEvent().CheckEvent( &event ) )
+        {
+            return;
+        }
+        std::cout << m_IterationNumber++ << "   "<<endl;
+        std::cout << optimizer->GetCachedValue() << "   "<<endl;
+        std::cout << optimizer->GetCachedCurrentPosition() << std::endl;
+    }
+private:
+    unsigned long m_IterationNumber;
+};
 
 ////classe pour suivre le recalage multires
 //template <typename TRegistration>
@@ -402,30 +403,32 @@ int main(int argc, const char * argv[]) {
     
     ImageType::Pointer US_shrunk = shrinkFilter->GetOutput();
 //
-        //verification ecriture de l'image
-            WriterType::Pointer writer6 = WriterType::New();
-            string out6 = "/Users/maximegerard/Documents/ShrunkUS.nii.gz";
-          //itk::NiftiImageIO::Pointer io = itk::NiftiImageIO::New();
-            writer6->SetImageIO(io);
-            writer6->SetInput(US_shrunk);
-            writer6->SetFileName(out6);
-            try {
-                writer6->Update();
-            } catch (itk::ExceptionObject &e) {
-                cerr<<"error while writing rescaled image"<<endl;
-                cerr<<e<<endl;
-                return EXIT_FAILURE;
-            }
+//        //verification ecriture de l'image
+//            WriterType::Pointer writer6 = WriterType::New();
+//            string out6 = "/Users/maximegerard/Documents/ShrunkUS.nii.gz";
+//          //itk::NiftiImageIO::Pointer io = itk::NiftiImageIO::New();
+//            writer6->SetImageIO(io);
+//            writer6->SetInput(US_shrunk);
+//            writer6->SetFileName(out6);
+//            try {
+//                writer6->Update();
+//            } catch (itk::ExceptionObject &e) {
+//                cerr<<"error while writing rescaled image"<<endl;
+//                cerr<<e<<endl;
+//                return EXIT_FAILURE;
+//            }
     
     cout<<"done writing shrunk US"<<endl;
+    cout<<"taille US shrunk : "<<US_shrunk->GetLargestPossibleRegion().GetSize()<<endl;
     
     /****************
-    * RESCALING IRM
+     * RESCALING IRM
      ***************/
     
     cout<<"rescaling de l'image IRM"<<endl;
     RescaleFilterType::Pointer rescaler = RescaleFilterType::New();
     rescaler->SetInput(image_IRM);
+    //rescaler->SetInput(MRI_shrunk);
     rescaler->SetOutputMinimum(0);
     rescaler->SetOutputMaximum(255);
     try {
@@ -438,6 +441,31 @@ int main(int argc, const char * argv[]) {
     
     
     ImageType::Pointer rescaled_IRM = rescaler->GetOutput();
+    
+//    /*******************
+//     * DOWNSAMPLING IRM
+//     *******************/
+//    
+//    ShrinkFilterType::Pointer shrinkerMRI = ShrinkFilterType::New();
+//    shrinkerMRI->SetInput(rescaled_IRM);
+//    shrinkerMRI->SetShrinkFactor(0, 2);
+//    shrinkerMRI->SetShrinkFactor(1, 2);
+//    shrinkerMRI->SetShrinkFactor(2, 2);
+//    try {
+//        shrinkerMRI->Update();
+//    } catch (itk::ExceptionObject &e) {
+//        cerr<<"error while shrinking MRI image"<<endl;
+//        cerr<<e<<endl;
+//        return EXIT_FAILURE;
+//    }
+//    
+//    ImageType::Pointer MRI_shrunk = shrinkerMRI->GetOutput();
+//    
+//    cout<<"taille MRI shrunk : "<<MRI_shrunk->GetLargestPossibleRegion().GetSize()<<endl;
+    
+    
+    
+
     
 //    //min max image IRM
 //    MinMaxCalculatorType::Pointer minMaxIRM2 = MinMaxCalculatorType::New();
@@ -471,49 +499,113 @@ int main(int argc, const char * argv[]) {
     
     //they must be column_vector !!!
     
-//    matrix<double> initialParameters (6,1);
-//    initialParameters(0) = 0;
-//    initialParameters(1) = 0;
-//    initialParameters(2) = 0;
-//    initialParameters(3) = 0;
-//    initialParameters(4) = 0;
-//    initialParameters(5) = 0;
-//    
-//    cout<<"test params intial : "<<initialParameters<<endl;
-//    
-//    matrix<double> x_lower (6,1); //-0.5 rot, -10 trans
-//    x_lower(0) = -1;
-//    x_lower(1) = -1;
-//    x_lower(2) = -1;
-//    x_lower(3) = -1;
-//    x_lower(4) = -1;
-//    x_lower(5) = -1;
-//    
-//    matrix<double> x_upper (6,1); //0.5 rot, 10 trans
-//    x_upper(0) = 1;
-//    x_upper(1) = 1;
-//    x_upper(2) = 1;
-//    x_upper(3) = 1;
-//    x_upper(4) = 1;
-//    x_upper(5) = 1;
-//    
-//    double m = 13;
-//    
-//    //rho begin
-//    double radius = 0.1; //zero makes no sense !!!
-//    
-//    //rho end
-//    double precision = 0.001;
-//    
-//    //niter
-//    double nombreIteration = 200;
-//    
-//   double best_score = find_max_bobyqa(LC2_function(rescaled_IRM,US_shrunk), initialParameters, m, x_lower, x_upper, radius, precision, nombreIteration);
-//    //double best_score = find_min_bobyqa(LC2_function(rescaled_IRM, US_shrunk), initialParameters, m, x_lower, x_upper, radius, precision, nombreIteration);
-//    
-//    cout<<"best score : "<<best_score<<endl;
-//    cout<<"test best parameters : "<<initialParameters<<endl; // ok faut juste pas oublier de tout mutliplier par 5 pour les rotation et 100 pour les translations
+    //Porc 1
+    //best score : 0.183876
+    //final parameters : [-0.03514169419515513, 0.04780031905516767, 0.08510374453376125, -3.16002229212777, -0.7603111683282886, -1.5771778577960676]
     
+    //porc4
+//    best score : 0.185428
+//    final parameters : [-0.025424753944333096, 0.39962575090364716, 0.013544113893079517, -0.047444368532859084, -0.739287807247723, -0.5011674690804339]
+    
+  
+    
+    matrix<double> initialParameters (6,1);
+    initialParameters(0) = 0;
+    initialParameters(1) = 0;
+    initialParameters(2) = 0;
+    initialParameters(3) = 0;
+    initialParameters(4) = 0;
+    initialParameters(5) = 0;
+    
+    
+    //cout<<"test params intial : "<<initialParameters<<endl;
+    
+    matrix<double> x_lower (6,1); //-0.5 rot, -10 trans
+    x_lower(0) = -1;
+    x_lower(1) = -1;
+    x_lower(2) = -1;
+    x_lower(3) = -1;
+    x_lower(4) = -1;
+    x_lower(5) = -1;
+    
+    matrix<double> x_upper (6,1); //0.5 rot, 10 trans
+    x_upper(0) = 1;
+    x_upper(1) = 1;
+    x_upper(2) = 1;
+    x_upper(3) = 1;
+    x_upper(4) = 1;
+    x_upper(5) = 1;
+    
+    double m = 13;
+    
+    //rho begin
+    double radius = 0.9; //zero makes no sense !!!
+    
+    //rho end
+    double precision = 0.001;
+    
+    //niter
+    double nombreIteration = 200;
+    
+   double best_score = find_max_bobyqa(LC2_function(rescaled_IRM,US_shrunk), initialParameters, m, x_lower, x_upper, radius, precision, nombreIteration);
+    //double best_score = find_min_bobyqa(LC2_function(rescaled_IRM, US_shrunk), initialParameters, m, x_lower, x_upper, radius, precision, nombreIteration);
+    
+    cout<<"best score : "<<best_score<<endl;
+    //cout<<"test best parameters : "<<initialParameters<<endl; // ok faut juste pas oublier de tout mutliplier par 5 pour les rotation et 100 pour les translations
+    EulerTransformType::ParametersType finalParameters(6);
+    finalParameters[0] = initialParameters(0)*5/(10*radius);
+    finalParameters[1] = initialParameters(1)*5/(10*radius);
+    finalParameters[2] = initialParameters(2)*5/(10*radius);
+    finalParameters[3] = initialParameters(3)*100/(10*radius);
+    finalParameters[4] = initialParameters(4)*100/(10*radius);
+    finalParameters[5] = initialParameters(5)*100/(10*radius);
+    
+    EulerTransformType::Pointer finalTsf = EulerTransformType::New();
+    finalTsf->SetParameters(finalParameters);
+    
+    cout<<"final parameters : "<<finalTsf->GetParameters()<<endl;
+    cout<<"Writing final registered US image"<<endl;
+    
+    ImageType::SizeType sizeUS = US_shrunk->GetLargestPossibleRegion().GetSize();
+    ImageType::PointType origin = US_shrunk->GetOrigin();
+    ImageType::SpacingType spacing = US_shrunk->GetSpacing();
+    ImageType::PointType center;
+    center[0] = origin[0]+spacing[0]*sizeUS[0]/2;
+    center[1] = origin[1]+spacing[1]*sizeUS[1]/2;
+    center[2] = origin[2]+spacing[2]*sizeUS[2]/2;
+    
+    
+    EulerTransformType::ParametersType eulerFixedParameters(3);
+    eulerFixedParameters[0] =center[0];
+    eulerFixedParameters[1] =center[1];
+    eulerFixedParameters[2] =center[2];
+    
+    finalTsf->SetFixedParameters(eulerFixedParameters);
+    
+    ResampleFilterType::Pointer resampler = ResampleFilterType::New();
+    resampler->SetTransform(finalTsf);
+    resampler->SetInput(image_US);
+    resampler->SetOutputDirection(finalTsf->GetInverseMatrix()*image_US->GetDirection());
+    resampler->SetSize(image_US->GetLargestPossibleRegion().GetSize());
+    resampler->SetOutputSpacing(image_US->GetSpacing());
+    resampler->SetOutputOrigin(finalTsf->GetInverseTransform()->TransformPoint(image_US->GetOrigin()));
+    
+    ImageType::Pointer outputImage = ImageType::New();
+    outputImage = resampler->GetOutput();
+    
+    WriterType::Pointer writer7 = WriterType::New();
+    string out7 ="/Users/maximegerard/Documents/finalregistreredUSBOBYQA.nii.gz";
+    writer7->SetImageIO(io);
+    writer7->SetInput(outputImage);
+    writer7->SetFileName(out7);
+    try {
+        writer7->Update();
+    } catch (itk::ExceptionObject &e) {
+        cerr<<"error whilte writing registered image"<<endl;
+        cerr<<e<<endl;
+        return EXIT_FAILURE;
+    }
+
     
     
 //    
@@ -536,15 +628,15 @@ int main(int argc, const char * argv[]) {
 //    /////////////////
 //    
 // //LM optimizer
-//    cout<<"creation LM optimizer"<<endl;
-//    LMOptimizerType::Pointer optimizer = LMOptimizerType::New();
-//    optimizer->SetUseCostFunctionGradient(false);
+////    cout<<"creation LM optimizer"<<endl;
+////    LMOptimizerType::Pointer optimizer = LMOptimizerType::New();
+////    optimizer->SetUseCostFunctionGradient(false);
 //    
 //    //Amoeba optimizer
 //    
-////    cout<<"creation optimizer"<<endl;
-////    
-////    OptimizerType::Pointer optimizer = OptimizerType::New();
+//    cout<<"creation optimizer"<<endl;
+//    
+//    AmoebaOptimizerType::Pointer optimizer = AmoebaOptimizerType::New();
 //    
 //    
 //    //interpolateur et metrique
@@ -553,8 +645,8 @@ int main(int argc, const char * argv[]) {
 //    // 3. INTERPOLATOR //
 //    /////////////////////
 //    
-////    cout<<"creation interpolateur"<<endl;
-////    InterpolatorType::Pointer interpolator = InterpolatorType::New();
+//    cout<<"creation interpolateur"<<endl;
+//    InterpolatorType::Pointer interpolator = InterpolatorType::New();
 //    
 //    
 //    /////////////////
@@ -562,93 +654,112 @@ int main(int argc, const char * argv[]) {
 //    ////////////////
 //    //pipeline de recalage
 //    
-//    //RegistrationType::Pointer registration = RegistrationType::New();
+//    RegistrationType::Pointer registration = RegistrationType::New();
 //    
 //    //settings des blocs constitutifs
 //   
 //    cout<<"settings des blocs constitutifs"<<endl;
 //  
-////    registration->SetOptimizer(optimizer);
-////    registration->SetTransform(transform);
-////    registration->SetInterpolator(interpolator);
+//    registration->SetOptimizer(optimizer);
+//    registration->SetTransform(transform);
+//    registration->SetInterpolator(interpolator);
 //
-//    
-//    ///////////////
-//    // 4. METRIC //
-//    ///////////////
+////
+////    ///////////////
+////    // 4. METRIC //
+////    ///////////////
 //    cout<<"setting metrique"<<endl;
-//    //LC2MetricType::Pointer metric = LC2MetricType::New();
+//    LC2MetricType::Pointer metric = LC2MetricType::New();
 //    
-//    //test metric mutliple valued
-//    LC2MVMetricType::Pointer metricMV = LC2MVMetricType::New();
-//    metricMV->SetMoving(US_shrunk);
-//    metricMV->SetFixed(rescaled_IRM);
-//    metricMV->ComputeGradImage();
-//    metricMV->ComputeMask();
+////    //test metric mutliple valued
+////    LC2MVMetricType::Pointer metricMV = LC2MVMetricType::New();
+////    metricMV->SetMoving(US_shrunk);
+////    metricMV->SetFixed(rescaled_IRM);
+////    metricMV->ComputeGradImage();
+////    metricMV->ComputeMask();
+////    
+////    EulerTransformType::ParametersType parameters(6);
+////    parameters[0]=0;
+////    parameters[1]=0;
+////    parameters[2]=0;
+////    parameters[3]=0;
+////    parameters[4]=0;
+////    parameters[5]=0;
+////    transform->SetParameters(parameters);
+////    
+////    //fixed param
+////    ImageType::SizeType sizeUS = US_shrunk->GetLargestPossibleRegion().GetSize();
+////    ImageType::PointType origin = US_shrunk->GetOrigin();
+////    ImageType::SpacingType spacing = US_shrunk->GetSpacing();
+////    ImageType::PointType center;
+////    center[0] = origin[0]+spacing[0]*sizeUS[0]/2;
+////    center[1] = origin[1]+spacing[1]*sizeUS[1]/2;
+////    center[2] = origin[2]+spacing[2]*sizeUS[2]/2;
+////    
+////    
+////    EulerTransformType::ParametersType eulerFixedParameters(3);
+////    eulerFixedParameters[0] =center[0];
+////    eulerFixedParameters[1] =center[1];
+////    eulerFixedParameters[2] =center[2];
+////    
+////    transform->SetFixedParameters(eulerFixedParameters);
+////    
+////    metricMV->SetTransform(transform);
+////    cout<<"params initiaux : "<<metricMV->GetTransform()->GetParameters()<<endl;
+////    //metricMV->SetTransformParameters(parameters);
+////    //metricMV->GetValue(parameters);
+////    
+////    
+////    
+////    OptimizerType::ScalesType scales(transform->GetNumberOfParameters());
+////    //setting the scales and ranges for the parameters of the transform
+////    const double translationScale = 2000.0; //dynamic range for tsl
+////    const double rotationScale = 50.0; //dynamic range for rotations
+////    
+////    scales[0] = 1/rotationScale;
+////    scales[1] = 1/rotationScale;
+////    scales[2] = 1/rotationScale;
+////    scales[3] = 1/translationScale;
+////    scales[4] = 1/translationScale;
+////    scales[5] = 1/translationScale;
+////    
+////    unsigned long numberOfIterations = 200;
+////    //double gradientTolerance = 1e-4;
+////    double valueTolerance = 1e-3;
+////    double epsilonFunction = 1e-4;
+////    
+////    optimizer->SetCostFunction(metricMV);
+////    optimizer->SetScales(scales);
+////    optimizer->SetNumberOfIterations(numberOfIterations);
+////    optimizer->SetValueTolerance(valueTolerance);
+////    //optimizer->SetGradientTolerance(gradientTolerance);
+////    optimizer->SetEpsilonFunction(epsilonFunction);
+////    optimizer->SetInitialPosition(parameters);
+////    
+////    //optimizer->UseCostFunctionGradientOff();
+////    
+////    //observateur
+////    CommandIterationUpdate::Pointer observer = CommandIterationUpdate::New();
+////    optimizer->AddObserver(itk::IterationEvent(), observer);
+////    
+////    cout<<"start optimisation "<<endl;
+////    //optimizer->StartOptimization();
+////    
+////    try {
+////        optimizer->StartOptimization();
+////    } catch (itk::ExceptionObject &e) {
+////        cerr<<"error while optimizing cost function"<<endl;
+////        cerr<<e<<endl;
+////    }
+////    
+////    
+////    cout<<"transform best param according to optimizer : "<<optimizer->GetCurrentPosition()<<endl;
+////    cout<<"best param test transform : "<<transform->GetParameters()<<endl;
+////    cout<<"best value : "<<optimizer->GetValue()<<endl;
+////
+//
+//  //Amoeba optimizer
 //    
-//    EulerTransformType::ParametersType parameters(6);
-//    parameters[0]=0;
-//    parameters[1]=0;
-//    parameters[2]=0;
-//    parameters[3]=0;
-//    parameters[4]=0;
-//    parameters[5]=0;
-//    transform->SetParameters(parameters);
-//    metricMV->SetTransform(transform);
-//    cout<<"params initiaux : "<<metricMV->GetTransform()->GetParameters()<<endl;
-//    metricMV->SetTransformParameters(parameters);
-//    //metricMV->GetValue(parameters);
-//    
-//    
-//    OptimizerType::ScalesType scales(transform->GetNumberOfParameters());
-//    //setting the scales and ranges for the parameters of the transform
-//    const double translationScale = 20.0; //dynamic range for tsl
-//    const double rotationScale = 1.0; //dynamic range for rotations
-//    
-//    scales[0] = 1/rotationScale;
-//    scales[1] = 1/rotationScale;
-//    scales[2] = 1/rotationScale;
-//    scales[3] = 1/translationScale;
-//    scales[4] = 1/translationScale;
-//    scales[5] = 1/translationScale;
-//    
-//    unsigned long numberOfIterations = 200;
-//    //double gradientTolerance = 1e-4;
-//    double valueTolerance = 1e-3;
-//    double epsilonFunction = 1e-4;
-//    
-//    optimizer->SetScales(scales);
-//    optimizer->SetNumberOfIterations(numberOfIterations);
-//    optimizer->SetValueTolerance(valueTolerance);
-//    //optimizer->SetGradientTolerance(gradientTolerance);
-//    optimizer->SetEpsilonFunction(epsilonFunction);
-//    optimizer->SetCostFunction(metricMV);
-//    optimizer->SetInitialPosition(parameters);
-//    
-//    //optimizer->UseCostFunctionGradientOff();
-//    
-//    //observateur
-//    CommandIterationUpdate::Pointer observer = CommandIterationUpdate::New();
-//    optimizer->AddObserver(itk::IterationEvent(), observer);
-//    
-//    cout<<"start optimisation "<<endl;
-//    //optimizer->StartOptimization();
-//    
-//    try {
-//        optimizer->StartOptimization();
-//    } catch (itk::ExceptionObject &e) {
-//        cerr<<"error while optimizing cost function"<<endl;
-//        cerr<<e<<endl;
-//    }
-//    
-//    
-//    cout<<"transform best param according to optimizer : "<<optimizer->GetCurrentPosition()<<endl;
-//    cout<<"best param test transform : "<<transform->GetParameters()<<endl;
-    //cout<<"best value : "<<optimizer->GetValue()<<endl;
-
-
-    
-    
 //    registration->SetMetric(metric);
 //    
 //    
@@ -668,12 +779,13 @@ int main(int argc, const char * argv[]) {
 //    
 //    RegistrationType::ParametersType initialParameters = transform->GetParameters();
 //    //setting des parametres optimizable
-//    initialParameters[0] = 0.0;
-//    initialParameters[1] = 0.0;
-//    initialParameters[2] = 0.0;
-//    initialParameters[3] = 0.0; //euler tsf = 6 parameters
-//    initialParameters[4] = 0.0;
-//    initialParameters[5] = 0.0;
+//    //test param BOBYQA porc1[-0.03514169419515513, 0.04780031905516767, 0.08510374453376125, -3.16002229212777, -0.7603111683282886, -1.5771778577960676]
+//    initialParameters[0] = -0.03514169419515513;
+//    initialParameters[1] = 0.04780031905516767;
+//    initialParameters[2] = 0.08510374453376125;
+//    initialParameters[3] = -3.16002229212777; //euler tsf = 6 parameters
+//    initialParameters[4] = -0.7603111683282886;
+//    initialParameters[5] = -1.5771778577960676;
 //    
 //    registration->SetInitialTransformParameters(initialParameters);
 //    
@@ -685,7 +797,7 @@ int main(int argc, const char * argv[]) {
 //    
 //    //setting des params de l'optimizer
 //    const unsigned int numberOfParameters = transform->GetNumberOfParameters();
-//    OptimizerType::ParametersType simplexDelta(numberOfParameters);
+//    AmoebaOptimizerType::ParametersType simplexDelta(numberOfParameters);
 //    simplexDelta[0] =0.5;
 //    simplexDelta[1] =0.5;
 //    simplexDelta[2] =0.5;
@@ -737,38 +849,38 @@ int main(int argc, const char * argv[]) {
 //    cout<<"parametres : "<<finalParameters<<endl;
 //    cout<<"metric value : "<<bestValue<<endl;
 //    
-//    cout<<"formation de l'image recalee"<<endl;
+////    cout<<"formation de l'image recalee"<<endl;
+////    
+////    //TranslationType::Pointer finalTsl = TranslationType::New();
+////    EulerTransformType::Pointer finalTsf = EulerTransformType::New();
+////    
+////    finalTsf->SetParameters(finalParameters);
+////    finalTsf->SetFixedParameters(registration->GetTransform()->GetFixedParameters());
+////    
+////    ResampleFilterType::Pointer resampler = ResampleFilterType::New();
+////    resampler->SetTransform(finalTsf);
+////    resampler->SetInput(image_US);
+////    resampler->SetOutputDirection(finalTsf->GetInverseMatrix()*image_US->GetDirection());
+////    resampler->SetSize(image_US->GetLargestPossibleRegion().GetSize());
+////    resampler->SetOutputSpacing(image_US->GetSpacing());
+////    resampler->SetOutputOrigin(finalTsf->GetInverseTransform()->TransformPoint(image_US->GetOrigin()));
+////  
+////    ImageType::Pointer outputImage = ImageType::New();
+////    outputImage = resampler->GetOutput();
+////    
+////    WriterType::Pointer writer7 = WriterType::New();
+////    string out7 ="/Users/maximegerard/Documents/finalregistreredUSAmoeba.nii.gz";
+////    writer7->SetImageIO(io);
+////    writer7->SetInput(outputImage);
+////    writer7->SetFileName(out7);
+////    try {
+////        writer7->Update();
+////    } catch (itk::ExceptionObject &e) {
+////        cerr<<"error whilte writing registered image"<<endl;
+////        cerr<<e<<endl;
+////        return EXIT_FAILURE;
+////    }
 //    
-//    //TranslationType::Pointer finalTsl = TranslationType::New();
-//    TransformType::Pointer finalTsf = TransformType::New();
-//    
-//    finalTsf->SetParameters(finalParameters);
-//    finalTsf->SetFixedParameters(registration->GetTransform()->GetFixedParameters());
-//    
-//    ResampleFilterType::Pointer resampler = ResampleFilterType::New();
-//    resampler->SetTransform(finalTsf);
-//    resampler->SetInput(image_US);
-//    resampler->SetOutputDirection(finalTsf->GetInverseMatrix()*image_US->GetDirection());
-//    resampler->SetSize(image_US->GetLargestPossibleRegion().GetSize());
-//    resampler->SetOutputSpacing(image_US->GetSpacing());
-//    resampler->SetOutputOrigin(finalTsf->GetInverseTransform()->TransformPoint(image_US->GetOrigin()));
-//  
-//    ImageType::Pointer outputImage = ImageType::New();
-//    outputImage = resampler->GetOutput();
-//    
-//    WriterType::Pointer writer7 = WriterType::New();
-//    string out7 ="/Users/maximegerard/Documents/finalregistreredUS.nii.gz";
-//    writer7->SetImageIO(io);
-//    writer7->SetInput(outputImage);
-//    writer7->SetFileName(out7);
-//    try {
-//        writer7->Update();
-//    } catch (itk::ExceptionObject &e) {
-//        cerr<<"error whilte writing registered image"<<endl;
-//        cerr<<e<<endl;
-//        return EXIT_FAILURE;
-//    }
-    
     
     
     
