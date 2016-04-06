@@ -670,7 +670,7 @@ int main(int argc, const char * argv[]) {
     //niter
     double nombreIteration = 200;
     
-    LC2_function LC2 = LC2_function(rescaled_IRM,US_shrunk);//MRI_shrunk or rescaled
+    LC2_function LC2 = LC2_function(MRI_shrunk,US_shrunk);//MRI_shrunk or rescaled
     //make sure that the mask is computed on US_Shrunk but that we use the rescaled image to compute LC2
     //LC2.setMovingImage(rescaled_US);
     LC2.setMaxRot(0.3);
