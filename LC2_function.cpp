@@ -68,7 +68,7 @@ void LC2_function::limitMRI()
     //enregistrement pour verification
     WriterType::Pointer writer10 = WriterType::New();
     itk::NiftiImageIO::Pointer io = itk::NiftiImageIO::New();
-    std::string out10 = "/Users/maximegerard/Documents/testCroppingMRI.nii.gz";
+    std::string out10 = m_outputPath+"/testCroppingMRI.nii.gz";
     writer10->SetImageIO(io);
     writer10->SetInput(m_accessibleMRI);
     writer10->SetFileName(out10);
@@ -99,7 +99,7 @@ void LC2_function::computeGradient()
     //write image for test
     
             typename WriterType::Pointer writer1 = WriterType::New();
-            string out1 = "/Users/maximegerard/Documents/testgrad.nii.gz";
+            string out1 = m_outputPath+"/testgrad.nii.gz";
             itk::NiftiImageIO::Pointer io = itk::NiftiImageIO::New();
             writer1->SetInput(m_grad);
             writer1->SetImageIO(io);
@@ -162,7 +162,7 @@ void LC2_function::computeMask()
     //writing mask images
     
     BinaryWriterType::Pointer writer3 = BinaryWriterType::New();
-    std::string out3 = "/Users/maximegerard/Documents/testmask.nii.gz";
+    std::string out3 = m_outputPath+"/testmask.nii.gz";
     itk::NiftiImageIO::Pointer io = itk::NiftiImageIO::New();
     writer3->SetInput(m_mask);
     writer3->SetImageIO(io);

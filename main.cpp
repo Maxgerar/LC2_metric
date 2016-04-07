@@ -226,7 +226,7 @@ int main(int argc, const char * argv[]) {
     
     string filenameUS;
     string filenameIRM;
-    string outputFilename;
+    string outputPath;
     string filenameMaskLiver;
     
     bool useLiverMask=false;
@@ -264,7 +264,7 @@ int main(int argc, const char * argv[]) {
         if(strcmp(argv[i], "-o")==0)
         {
             i++;
-            outputFilename = argv[i];
+            outputPath = argv[i];
         }
         
         
@@ -290,7 +290,7 @@ int main(int argc, const char * argv[]) {
     }
     
     
-    if(outputFilename == "")
+    if(outputPath == "")
     {
         cerr<<"output path not provided"<<endl;
         return EXIT_FAILURE;
@@ -419,7 +419,7 @@ int main(int argc, const char * argv[]) {
 
 //        //verification ecriture de l'image
 //            WriterType::Pointer writer6 = WriterType::New();
-//            string out6 = "/Users/maximegerard/Documents/ShrunkUS.nii.gz";
+//            string out6 = outputPath+"/ShrunkUS.nii.gz";
 //            //itk::NiftiImageIO::Pointer io = itk::NiftiImageIO::New();
 //            writer6->SetImageIO(io);
 //            writer6->SetInput(US_shrunk);
@@ -460,7 +460,7 @@ int main(int argc, const char * argv[]) {
 //    
 //    //writer result
 //    WriterType::Pointer writer11 = WriterType::New();
-//    string out6 = "/Users/maximegerard/Documents/rescaled_US.nii.gz";
+//    string out6 = outputPath+"/rescaled_US.nii.gz";
 //    writer11->SetImageIO(io);
 //    writer11->SetInput(rescaled_US);
 //    writer11->SetFileName(out6);
@@ -498,7 +498,7 @@ int main(int argc, const char * argv[]) {
     WriterType::Pointer writer10 = WriterType::New();
     writer10->SetImageIO(io);
     writer10->SetInput(rescaled_IRM);
-    string out10 = "/Users/maximegerard/Documents/rescaled_MRI.nii.gz";
+    string out10 = outputPath+"/rescaled_MRI.nii.gz";
     writer10->SetFileName(out10);
     try {
         writer10->Update();
@@ -561,7 +561,7 @@ int main(int argc, const char * argv[]) {
 //    WriterType::Pointer writer9 = WriterType::New();
 //    writer9->SetImageIO(io);
 //    writer9->SetInput(IRM_enhanced);
-//    string out9 = "/Users/maximegerard/Documents/equalizedMRI.nii.gz";
+//    string out9 = outputPath+"/equalizedMRI.nii.gz";
 //    writer9->SetFileName(out9);
 //    try {
 //        writer9->Update();
@@ -669,6 +669,7 @@ int main(int argc, const char * argv[]) {
     LC2.setMaxRot(0.3);
     LC2.setMaxTrans(10);
     LC2.setRadius(radius);
+    LC2.setOutputPath(outputPath);
     
     if(useLiverMask) LC2.setLiverMask(LiverMask);
     
@@ -746,7 +747,7 @@ int main(int argc, const char * argv[]) {
 //    
 //    
 //    WriterType::Pointer writer7 = WriterType::New();
-//    string out7 ="/Users/maximegerard/Documents/IntermediaryregistreredUSBOBYQA.nii.gz";
+//    string out7 =outputPath"/IntermediaryregistreredUSBOBYQA.nii.gz";
 //    writer7->SetImageIO(io);
 //    writer7->SetInput(temp_image_US);
 //    writer7->SetFileName(out7);
@@ -856,7 +857,7 @@ int main(int argc, const char * argv[]) {
     
     //ecritire des parametres dans un fichier txt
     
-    string outP ="/Users/maximegerard/Documents/parameters.txt";
+    string outP =outputPath+"/parameters.txt";
     ofstream fichier(outP.c_str(),ios::out | ios::trunc );
     
     if(fichier)
@@ -905,7 +906,7 @@ int main(int argc, const char * argv[]) {
     cout<<"writing final result"<<endl;
     
     WriterType::Pointer writer8 = WriterType::New();
-    string out8 ="/Users/maximegerard/Documents/finalregistreredUSBOBYQA.nii.gz";
+    string out8 =outputPath+"/finalregistreredUSBOBYQA.nii.gz";
     writer8->SetImageIO(io);
     writer8->SetInput(finalImage);
     writer8->SetFileName(out8);
@@ -1185,7 +1186,7 @@ int main(int argc, const char * argv[]) {
 ////    outputImage = resampler->GetOutput();
 ////    
 ////    WriterType::Pointer writer7 = WriterType::New();
-////    string out7 ="/Users/maximegerard/Documents/finalregistreredUSAmoeba.nii.gz";
+////    string out7 =outputPath+"/finalregistreredUSAmoeba.nii.gz";
 ////    writer7->SetImageIO(io);
 ////    writer7->SetInput(outputImage);
 ////    writer7->SetFileName(out7);

@@ -329,7 +329,7 @@ public:
         //        //writing to verify
         //        typename WriterType::Pointer writer4 = WriterType::New();
         //        //itk::NiftiImageIO::Pointer io = itk::NiftiImageIO::New();
-        //        string out4 = "/Users/maximegerard/Documents/testCroppingUS.nii.gz";
+        //        string out4 = "/testCroppingUS.nii.gz";
         //        writer4->SetImageIO(io);
         //        writer4->SetInput(Fixed_Cropped);
         //        writer4->SetFileName(out4);
@@ -856,6 +856,7 @@ public:
     void setMovingImage(ImageType::Pointer US){m_MovingImage =US;}
     void setFixedImafe(ImageType::Pointer MRI){m_FixedImage=MRI;}
     void setLiverMask(MaskType::Pointer liver);
+    void setOutputPath(std::string out){m_outputPath=out;}
     
     //getters
     double getMaxRot(){return m_maxRot;}
@@ -870,6 +871,8 @@ private:
     MaskType::Pointer m_LiverMask;
     ImageType::Pointer m_grad;
     ImageType::Pointer m_accessibleMRI;
+    
+    string m_outputPath;
     
     bool m_useLiverMask;
     
