@@ -8,6 +8,8 @@
 
 #include <iostream>
 #include <string>
+#include <fstream>
+
 #include "gradient.h"
 #include "LC2_function.hpp"
 
@@ -607,20 +609,11 @@ int main(int argc, const char * argv[]) {
     //porc6
 //    best score : 0.150082
 //    final parameters : [-0.0150802635531933, -0.010100620088642457, 0.004725328308930741, 8.30720384677868, 0.3776652489827957, 0.9237480980253407]
-//    best score 1ere etape : 0.150132
-//    rough parameters : -0.253309
-//    -0.175662
-//    0.0743093
-//    7.51138
-//    0.353567
-//    0.882188
-//    
-//    test best parameters 1ere etape: -0.0140727
-//    -0.009759
-//    0.00412829
-//    8.34598 
-//    0.392852 
-//    0.980209
+
+
+    //MRI Shrunk + mask
+//    best score 1ere etape : 0.195807
+//    final parameters : [-0.004576003822187878, -0.018662112915280166, 0.021674120903660443, 1.335316780176604, 0.012001995175122276, -0.08281897027573802]
     
     /**********
      *IDEAS TO TEST
@@ -860,6 +853,26 @@ int main(int argc, const char * argv[]) {
     finalTsf->SetParameters(finalParameters);
     
     cout<<"final parameters : "<<finalTsf->GetParameters()<<endl;
+    
+    //ecritire des parametres dans un fichier txt
+    
+    string outP ="/Users/maximegerard/Documents/parameters.txt";
+    ofstream fichier(outP.c_str(),ios::out | ios::trunc );
+    
+    if(fichier)
+    {
+        fichier<<"Parameters for rigid transform : "<<endl;
+        fichier<<finalTsf->GetParameters()<<endl;
+        fichier<<" Score for this position : "<<endl;
+        fichier<<best_score<<endl;
+        fichier.close();
+    }
+    
+    else
+    {
+        cerr<<"Error in opening txt file for parameters"<<endl;
+    }
+    
     cout<<"Writing final registered US image"<<endl;
     
     ImageType::SizeType sizeUS2 = US_shrunk->GetLargestPossibleRegion().GetSize();
