@@ -8,9 +8,10 @@
 
 #include "LC2_function.hpp"
 
-LC2_function::LC2_function(ImageType::Pointer im_Fixed, ImageType::Pointer im_Moving)
+LC2_function::LC2_function(ImageType::Pointer im_Fixed, ImageType::Pointer im_Moving,string out)
 {
-    std::cout<<"creating measure object"<<std::endl;
+    //std::cout<<"creating measure object"<<std::endl;
+    m_outputPath=out;
     m_FixedImage = im_Fixed;
     m_MovingImage = im_Moving;
     computeGradient();
@@ -180,4 +181,121 @@ void LC2_function::computeMask()
     
 }
 
+ImageType::Pointer LC2_function::TransformImage(const dlib::matrix<double> &params, int ind) const
+{
+    ImageType::Pointer imageTransformed;
+    
+    if(ind==1)
+    {
+        EulerTransformType::Pointer transform = EulerTransformType::New();
+        EulerTransformType::ParametersType parameters(6);
+        //mise a l'echelle des parametres
+        parameters[0] = params(0)*(m_maxRot/m_radius);
+        parameters[1] = params(1)*(m_maxRot/m_radius);
+        parameters[2] = params(2)*(m_maxRot/m_radius);
+        parameters[3] = params(3)*(m_maxTrans/m_radius);
+        parameters[4] = params(4)*(m_maxTrans/m_radius);
+        parameters[5] = params(5)*(m_maxTrans/m_radius);
+        transform->SetParameters(parameters);
+        std::cout<<"euler tsf parameters : "<<transform->GetParameters()<<std::endl;
+        
+        typename ImageType::SizeType sizeUS = m_MovingImage->GetLargestPossibleRegion().GetSize();
+        typename ImageType::PointType origin = m_MovingImage->GetOrigin();
+        typename ImageType::SpacingType spacing = m_MovingImage->GetSpacing();
+        typename ImageType::PointType center;
+        center[0] = origin[0]+spacing[0]*sizeUS[0]/2;
+        center[1] = origin[1]+spacing[1]*sizeUS[1]/2;
+        center[2] = origin[2]+spacing[2]*sizeUS[2]/2;
+        
+        
+        EulerTransformType::ParametersType eulerFixedParameters(3);
+        eulerFixedParameters[0] =center[0];
+        eulerFixedParameters[1] =center[1];
+        eulerFixedParameters[2] =center[2];
+        
+        transform->SetFixedParameters(eulerFixedParameters);
+        //std::cout<<"tsf fixed param : "<<transform->GetFixedParameters()<<std::endl;
+        
+        
+        
+        typename ResamplerType::Pointer resamplefilter = ResamplerType::New();
+        resamplefilter->SetInput(m_MovingImage);
+        resamplefilter->SetSize(m_FixedImage->GetLargestPossibleRegion().GetSize());
+        resamplefilter->SetOutputSpacing(m_FixedImage->GetSpacing());
+        resamplefilter->SetOutputDirection(m_FixedImage->GetDirection());
+        resamplefilter->SetOutputOrigin(m_FixedImage->GetOrigin());
+        resamplefilter->SetTransform(transform);
+        //resamplefilter->SetTransform(transform);
+        
+        try {
+            resamplefilter->Update();
+        } catch (itk::ExceptionObject &e) {
+            std::cerr<<"error while transforming moving image"<<std::endl;
+            std::cerr<<e<<std::endl;
+        }
+        
+       imageTransformed= resamplefilter->GetOutput();
+
+        
+    }
+    
+    return imageTransformed;
+}
+
+MaskType::Pointer LC2_function::TransformMask(const dlib::matrix<double> &params, int ind) const
+{
+    MaskType::Pointer maskTsf;
+    
+    if(ind==1)
+    {
+        EulerTransformType::Pointer transform = EulerTransformType::New();
+        EulerTransformType::ParametersType parameters(6);
+        //mise a l'echelle des parametres
+        parameters[0] = params(0)*(m_maxRot/m_radius);
+        parameters[1] = params(1)*(m_maxRot/m_radius);
+        parameters[2] = params(2)*(m_maxRot/m_radius);
+        parameters[3] = params(3)*(m_maxTrans/m_radius);
+        parameters[4] = params(4)*(m_maxTrans/m_radius);
+        parameters[5] = params(5)*(m_maxTrans/m_radius);
+        transform->SetParameters(parameters);
+        //std::cout<<"euler tsf parameters : "<<transform->GetParameters()<<std::endl;
+        
+        typename ImageType::SizeType sizeUS = m_MovingImage->GetLargestPossibleRegion().GetSize();
+        typename ImageType::PointType origin = m_MovingImage->GetOrigin();
+        typename ImageType::SpacingType spacing = m_MovingImage->GetSpacing();
+        typename ImageType::PointType center;
+        center[0] = origin[0]+spacing[0]*sizeUS[0]/2;
+        center[1] = origin[1]+spacing[1]*sizeUS[1]/2;
+        center[2] = origin[2]+spacing[2]*sizeUS[2]/2;
+        
+        
+        EulerTransformType::ParametersType eulerFixedParameters(3);
+        eulerFixedParameters[0] =center[0];
+        eulerFixedParameters[1] =center[1];
+        eulerFixedParameters[2] =center[2];
+        
+        transform->SetFixedParameters(eulerFixedParameters);
+        //std::cout<<"tsf fixed param : "<<transform->GetFixedParameters()<<std::endl;
+        
+        ResamplerBinaryType::Pointer maskResampler = ResamplerBinaryType::New();
+        maskResampler->SetInput(m_mask);
+        maskResampler->SetOutputDirection(m_FixedImage->GetDirection());
+        maskResampler->SetOutputOrigin(m_FixedImage->GetOrigin());
+        maskResampler->SetOutputSpacing(m_FixedImage->GetSpacing());
+        maskResampler->SetSize(m_FixedImage->GetLargestPossibleRegion().GetSize());
+        maskResampler->SetTransform(transform);
+        
+        try {
+            maskResampler->Update();
+        } catch (itk::ExceptionObject &e) {
+            cerr<<"error while transforming mesh"<<endl;
+            cerr<<e<<endl;
+        }
+        
+        maskTsf = maskResampler->GetOutput();
+        
+    }
+    
+    return maskTsf;
+}
 
