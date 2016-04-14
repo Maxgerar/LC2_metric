@@ -181,7 +181,7 @@ public:
         
         typename ShrinkFilterType::Pointer shrinkFilter = ShrinkFilterType::New();
         shrinkFilter->SetInput(movedImage);
-        shrinkFilter->SetShrinkFactor(0,2);
+        shrinkFilter->SetShrinkFactor(0,2);//2
         shrinkFilter->SetShrinkFactor(1,2);
         shrinkFilter->SetShrinkFactor(2,2);
         try {

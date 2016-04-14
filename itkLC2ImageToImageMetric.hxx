@@ -108,61 +108,11 @@ template<typename TFixedImage, typename TMovingImage>
         
     }
     
-/************
- * VESSELNESS
- **************/
-    
-    template<typename TFixedImage, typename TMovingImage>
-    void
-    LC2ImageToImageMetric<TFixedImage,TMovingImage>::ComputeVesselnessImage()
-    {
-        std::cout<<"compute vesselness image of fixed MRI image"<<std::endl;
-        
-        typename MultiScaleEnhancementFilterType::Pointer multiScaleFilter = MultiScaleEnhancementFilterType::New();
-        multiScaleFilter->SetInput(this->m_FixedImage);
-        
-        typename VesselnessMeasureFilterType::Pointer vesselnessFilter = VesselnessMeasureFilterType::New();
-        vesselnessFilter->SetAlpha1(1.5);
-        vesselnessFilter->SetAlpha2(1.5);
-        
-        
-        multiScaleFilter->SetHessianToMeasureFilter(vesselnessFilter);
-        multiScaleFilter->SetSigmaMinimum(6.8);
-        multiScaleFilter->SetSigmaMaximum(8.0);
-        multiScaleFilter->SetNumberOfSigmaSteps(5);
-        try {
-            multiScaleFilter->Update();
-        } catch (itk::ExceptionObject & e) {
-            std::cerr<<"error while computing vesselness image"<<std::endl;
-            std::cerr<<e<<std::endl;
-        }
-        
-        m_vesselness = multiScaleFilter->GetOutput();
-        
-        //ecrire fichier pour verification
-        
-        typename WriterType::Pointer writer10 = WriterType::New();
-        itk::NiftiImageIO::Pointer io = itk::NiftiImageIO::New();
-        std::string out10 = "/Users/maximegerard/Documents/testVesselness.nii.gz";
-        writer10->SetImageIO(io);
-        writer10->SetInput(m_vesselness);
-        writer10->SetFileName(out10);
-        try {
-            writer10->Update();
-        } catch (itk::ExceptionObject &e) {
-            std::cerr<<"error while writing Vesselness image"<<std::endl;
-            std::cerr<<e<<std::endl;
-        }
-        
-        std::cout<<"done writing vesselness image"<<std::endl;
-        
-    }
-    
 
 
-/*****
- * MASK FOR CROPPING
- *******/
+/***********************
+ * US MASK FOR CROPPING
+ ***********************/
     template <typename TFixedImage, typename TMovingImage>
     void
     LC2ImageToImageMetric<TFixedImage, TMovingImage>::ComputeMask()
@@ -209,21 +159,21 @@ template<typename TFixedImage, typename TMovingImage>
         
         //writing mask images
         
-        BinaryWriterType::Pointer writer3 = BinaryWriterType::New();
-        std::string out3 = "/Users/maximegerard/Documents/testmask.nii.gz";
-        itk::NiftiImageIO::Pointer io = itk::NiftiImageIO::New();
-        writer3->SetInput(m_mask);
-        writer3->SetImageIO(io);
-        writer3->SetFileName(out3);
-        try {
-            writer3->Update();
-        } catch (itk::ExceptionObject &e) {
-            std::cerr<<"error while writing image file"<<std::endl;
-            std::cerr<<e<<std::endl;
-            EXIT_FAILURE;
-        }
-//
-        std::cout<<"done writing final mask image"<<std::endl;
+//        BinaryWriterType::Pointer writer3 = BinaryWriterType::New();
+//        std::string out3 = "/Users/maximegerard/Documents/testmask.nii.gz";
+//        itk::NiftiImageIO::Pointer io = itk::NiftiImageIO::New();
+//        writer3->SetInput(m_mask);
+//        writer3->SetImageIO(io);
+//        writer3->SetFileName(out3);
+//        try {
+//            writer3->Update();
+//        } catch (itk::ExceptionObject &e) {
+//            std::cerr<<"error while writing image file"<<std::endl;
+//            std::cerr<<e<<std::endl;
+//            EXIT_FAILURE;
+//        }
+////
+//        std::cout<<"done writing final mask image"<<std::endl;
 
         
     }

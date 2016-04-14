@@ -98,22 +98,22 @@ void LC2_function::computeGradient()
     m_grad = filterG->GetOutput();
     
     //write image for test
-    
-            typename WriterType::Pointer writer1 = WriterType::New();
-            string out1 = m_outputPath+"/testgrad.nii.gz";
-            itk::NiftiImageIO::Pointer io = itk::NiftiImageIO::New();
-            writer1->SetInput(m_grad);
-            writer1->SetImageIO(io);
-            writer1->SetFileName(out1);
-            try {
-                writer1->Update();
-            } catch (itk::ExceptionObject &e) {
-                cerr<<"error while writing image file"<<endl;
-                cerr<<e<<endl;
-                EXIT_FAILURE;
-            }
-    
-            cout<<"done writing gradient image"<<endl;
+//    
+//            typename WriterType::Pointer writer1 = WriterType::New();
+//            string out1 = m_outputPath+"/testgrad.nii.gz";
+//            itk::NiftiImageIO::Pointer io = itk::NiftiImageIO::New();
+//            writer1->SetInput(m_grad);
+//            writer1->SetImageIO(io);
+//            writer1->SetFileName(out1);
+//            try {
+//                writer1->Update();
+//            } catch (itk::ExceptionObject &e) {
+//                cerr<<"error while writing image file"<<endl;
+//                cerr<<e<<endl;
+//                EXIT_FAILURE;
+//            }
+//    
+//            cout<<"done writing gradient image"<<endl;
 
     
 }
@@ -162,21 +162,21 @@ void LC2_function::computeMask()
     
     //writing mask images
     
-    BinaryWriterType::Pointer writer3 = BinaryWriterType::New();
-    std::string out3 = m_outputPath+"/testmask.nii.gz";
-    itk::NiftiImageIO::Pointer io = itk::NiftiImageIO::New();
-    writer3->SetInput(m_mask);
-    writer3->SetImageIO(io);
-    writer3->SetFileName(out3);
-    try {
-        writer3->Update();
-    } catch (itk::ExceptionObject &e) {
-        std::cerr<<"error while writing image file"<<std::endl;
-        std::cerr<<e<<std::endl;
-        EXIT_FAILURE;
-    }
-    
-    std::cout<<"done writing final mask image"<<std::endl;
+//    BinaryWriterType::Pointer writer3 = BinaryWriterType::New();
+//    std::string out3 = m_outputPath+"/testmask.nii.gz";
+//    itk::NiftiImageIO::Pointer io = itk::NiftiImageIO::New();
+//    writer3->SetInput(m_mask);
+//    writer3->SetImageIO(io);
+//    writer3->SetFileName(out3);
+//    try {
+//        writer3->Update();
+//    } catch (itk::ExceptionObject &e) {
+//        std::cerr<<"error while writing image file"<<std::endl;
+//        std::cerr<<e<<std::endl;
+//        EXIT_FAILURE;
+//    }
+//    
+//    std::cout<<"done writing final mask image"<<std::endl;
 
     
 }
@@ -185,6 +185,7 @@ ImageType::Pointer LC2_function::TransformImage(const dlib::matrix<double> &para
 {
     ImageType::Pointer imageTransformed;
     
+    //1 represents euler tsf
     if(ind==1)
     {
         EulerTransformType::Pointer transform = EulerTransformType::New();
@@ -246,6 +247,7 @@ MaskType::Pointer LC2_function::TransformMask(const dlib::matrix<double> &params
 {
     MaskType::Pointer maskTsf;
     
+    //1 represents euler tsf
     if(ind==1)
     {
         EulerTransformType::Pointer transform = EulerTransformType::New();

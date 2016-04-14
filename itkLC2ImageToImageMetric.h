@@ -187,7 +187,7 @@ private:
   double lc2varsum;
   MaskType::Pointer m_mask;
   typename TFixedImage::Pointer m_grad;
-  typename TFixedImage::Pointer m_vesselness;
+
 
 
 
