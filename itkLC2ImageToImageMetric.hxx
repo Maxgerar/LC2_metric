@@ -64,6 +64,131 @@ template<typename TFixedImage, typename TMovingImage>
         this->m_MovingImage =US;
     }
     
+    
+/********************
+ * IMAGES TSF
+ ********************/
+    
+    template<typename TFixedImage, typename TMovingImage>
+    typename TMovingImage::Pointer
+    LC2ImageToImageMetric<TFixedImage,TMovingImage>::TransformImage(const TransformParametersType &parameters, int ind) const
+    {
+        ImageType::Pointer imageTransformed;
+        
+        //1 represents euler tsf
+        if(ind==1)
+        {
+            EulerTransformType::Pointer transform = EulerTransformType::New();
+            transform->SetParameters(parameters);
+            //std::cout<<"euler tsf parameters : "<<transform->GetParameters()<<std::endl;
+            
+            typename ImageType::SizeType sizeUS = this->m_MovingImage->GetLargestPossibleRegion().GetSize();
+            typename ImageType::PointType origin = this->m_MovingImage->GetOrigin();
+            typename ImageType::SpacingType spacing = this->m_MovingImage->GetSpacing();
+            typename ImageType::PointType center;
+            center[0] = origin[0]+spacing[0]*sizeUS[0]/2;
+            center[1] = origin[1]+spacing[1]*sizeUS[1]/2;
+            center[2] = origin[2]+spacing[2]*sizeUS[2]/2;
+            
+            
+            EulerTransformType::ParametersType eulerFixedParameters(3);
+            eulerFixedParameters[0] =center[0];
+            eulerFixedParameters[1] =center[1];
+            eulerFixedParameters[2] =center[2];
+            
+            transform->SetFixedParameters(eulerFixedParameters);
+            //std::cout<<"tsf fixed param : "<<transform->GetFixedParameters()<<std::endl;
+            
+            
+            
+            typename ResamplerType::Pointer resamplefilter = ResamplerType::New();
+            resamplefilter->SetInput(this->m_MovingImage);
+            resamplefilter->SetSize(this->m_FixedImage->GetLargestPossibleRegion().GetSize());
+            resamplefilter->SetOutputSpacing(this->m_FixedImage->GetSpacing());
+            resamplefilter->SetOutputDirection(this->m_FixedImage->GetDirection());
+            resamplefilter->SetOutputOrigin(this->m_FixedImage->GetOrigin());
+            resamplefilter->SetTransform(transform);
+            //resamplefilter->SetTransform(transform);
+            
+            try {
+                resamplefilter->Update();
+            } catch (itk::ExceptionObject &e) {
+                std::cerr<<"error while transforming moving image"<<std::endl;
+                std::cerr<<e<<std::endl;
+            }
+            
+            imageTransformed= resamplefilter->GetOutput();
+            
+            
+        }
+        
+        return imageTransformed;
+
+    }
+    
+    
+    
+    template<typename TFixedImage, typename TMovingImage>
+    typename MaskType::Pointer
+    LC2ImageToImageMetric<TFixedImage,TMovingImage>::TransformMask(const TransformParametersType &parameters, int ind) const
+    {
+        MaskType::Pointer maskTsf;
+        
+        //1 represents euler tsf
+        if(ind==1)
+        {
+            EulerTransformType::Pointer transform = EulerTransformType::New();
+            transform->SetParameters(parameters);
+            //std::cout<<"euler tsf parameters : "<<transform->GetParameters()<<std::endl;
+            
+            typename ImageType::SizeType sizeUS = this->m_MovingImage->GetLargestPossibleRegion().GetSize();
+            typename ImageType::PointType origin = this->m_MovingImage->GetOrigin();
+            typename ImageType::SpacingType spacing = this->m_MovingImage->GetSpacing();
+            typename ImageType::PointType center;
+            center[0] = origin[0]+spacing[0]*sizeUS[0]/2;
+            center[1] = origin[1]+spacing[1]*sizeUS[1]/2;
+            center[2] = origin[2]+spacing[2]*sizeUS[2]/2;
+            
+            
+            EulerTransformType::ParametersType eulerFixedParameters(3);
+            eulerFixedParameters[0] =center[0];
+            eulerFixedParameters[1] =center[1];
+            eulerFixedParameters[2] =center[2];
+            
+            transform->SetFixedParameters(eulerFixedParameters);
+            //std::cout<<"tsf fixed param : "<<transform->GetFixedParameters()<<std::endl;
+            
+            ResamplerBinaryType::Pointer maskResampler = ResamplerBinaryType::New();
+            maskResampler->SetInput(m_mask);
+            maskResampler->SetOutputDirection(this->m_FixedImage->GetDirection());
+            maskResampler->SetOutputOrigin(this->m_FixedImage->GetOrigin());
+            maskResampler->SetOutputSpacing(this->m_FixedImage->GetSpacing());
+            maskResampler->SetSize(this->m_FixedImage->GetLargestPossibleRegion().GetSize());
+            maskResampler->SetTransform(transform);
+            
+            try {
+                maskResampler->Update();
+            } catch (itk::ExceptionObject &e) {
+                cerr<<"error while transforming mesh"<<endl;
+                cerr<<e<<endl;
+            }
+            
+            maskTsf = maskResampler->GetOutput();
+            
+        }
+        
+        return maskTsf;
+            
+        }
+    
+    template<typename TFixedImage, typename TMovingImage>
+    void
+    LC2ImageToImageMetric<TFixedImage,TMovingImage>::setLiverMask(MaskType::Pointer Mask)
+    {
+        m_useLiverMask=true;
+        m_LiverMask = Mask;
+    }
+    
 
 /************************
  * GRADIENT COMPUTATION
@@ -973,9 +1098,9 @@ LC2ImageToImageMetric<TFixedImage, TMovingImage>
     double lc2varsum2 = 0;
     
     //defining images
-    FixedImageConstPointer fixedImage = this->m_FixedImage;
+    //FixedImageConstPointer fixedImage = this->m_FixedImage;
     
-    if( !fixedImage )
+    if( !this->m_FixedImage )
     {
         itkExceptionMacro(<< "Fixed image has not been assigned");
     }
@@ -983,58 +1108,19 @@ LC2ImageToImageMetric<TFixedImage, TMovingImage>
     
     
     //image qui bouge = image US
-    MovingImageConstPointer movingImage = this->m_MovingImage;
+    //MovingImageConstPointer movingImage = this->m_MovingImage;
     
     
-    if(!movingImage)
+    if(!this->m_MovingImage)
     {
         itkExceptionMacro(<<"Moving image has not been assigned");
     }
     
     //transformation with regard to TransformParameters
     
+    ImageType::Pointer movedImage = TransformImage(parameters, 1);
+    MaskType::Pointer movedMask = TransformMask(parameters,1);
  
-    EulerTransformType::Pointer transform = EulerTransformType::New();
-    transform->SetParameters(parameters);
-    std::cout<<"euler tsf parameters : "<<transform->GetParameters()<<std::endl;
-    
-    typename TMovingImage::SizeType sizeUS = movingImage->GetLargestPossibleRegion().GetSize();
-    typename TMovingImage::PointType origin = movingImage->GetOrigin();
-    typename TMovingImage::SpacingType spacing = movingImage->GetSpacing();
-    typename TMovingImage::PointType center;
-    center[0] = origin[0]+spacing[0]*sizeUS[0]/2;
-    center[1] = origin[1]+spacing[1]*sizeUS[1]/2;
-    center[2] = origin[2]+spacing[2]*sizeUS[2]/2;
-    
-    
-    EulerTransformType::ParametersType eulerFixedParameters(3);
-    eulerFixedParameters[0] =center[0];
-    eulerFixedParameters[1] =center[1];
-    eulerFixedParameters[2] =center[2];
-    
-    transform->SetFixedParameters(eulerFixedParameters);
-    std::cout<<"tsf fixed param : "<<transform->GetFixedParameters()<<std::endl;
-    
-   
-    
-    typename ResamplerType::Pointer resamplefilter = ResamplerType::New();
-    resamplefilter->SetInput(movingImage);
-    resamplefilter->SetSize(fixedImage->GetLargestPossibleRegion().GetSize());
-    resamplefilter->SetOutputSpacing(fixedImage->GetSpacing());
-    resamplefilter->SetOutputDirection(fixedImage->GetDirection());
-    resamplefilter->SetOutputOrigin(fixedImage->GetOrigin());
-    resamplefilter->SetTransform(transform);
-    //resamplefilter->SetTransform(transform);
-
-    try {
-        resamplefilter->Update();
-    } catch (itk::ExceptionObject &e) {
-        std::cerr<<"error while transforming moving image"<<std::endl;
-        std::cerr<<e<<std::endl;
-        return EXIT_FAILURE;
-    }
-    
-    typename TMovingImage::Pointer movedImage = resamplefilter->GetOutput();
     
     //downsampling de l'image US
     
@@ -1057,29 +1143,11 @@ LC2ImageToImageMetric<TFixedImage, TMovingImage>
     //Transformation de l'image binaire
     //la tsf est la mm que pour l'US
     
-    //transformation du mask
-    ResamplerBinaryType::Pointer maskResampler = ResamplerBinaryType::New();
-    maskResampler->SetInput(m_mask);
-    maskResampler->SetOutputDirection(fixedImage->GetDirection());
-    maskResampler->SetOutputOrigin(fixedImage->GetOrigin());
-    maskResampler->SetOutputSpacing(fixedImage->GetSpacing());
-    maskResampler->SetSize(fixedImage->GetLargestPossibleRegion().GetSize());
-    maskResampler->SetTransform(transform);
-    
-    try {
-        maskResampler->Update();
-    } catch (itk::ExceptionObject &e) {
-        std::cerr<<"error while translating image"<<std::endl;
-        std::cerr<<e<<std::endl;
-        return EXIT_FAILURE;
-    }
-    
-    MaskType::Pointer tsfMask = maskResampler->GetOutput();
     
     //down sampling du mask
     
     BinaryShrinkFilterType::Pointer binaryShrink = BinaryShrinkFilterType::New();
-    binaryShrink->SetInput(tsfMask);
+    binaryShrink->SetInput(movedMask);
     binaryShrink->SetShrinkFactor(0, 2);
     binaryShrink->SetShrinkFactor(1, 2);
     binaryShrink->SetShrinkFactor(2, 2);
@@ -1253,214 +1321,430 @@ LC2ImageToImageMetric<TFixedImage, TMovingImage>
     int m = 343;
     
     //interpolateur pour image IRM et gradient
-    //        typename LinearInterpolatorType::Pointer interpolator = LinearInterpolatorType::New();
-    //        interpolator->SetInputImage(movedImage);
-    //
-    //        typename LinearInterpolatorType::Pointer gradInterpolator = LinearInterpolatorType::New();
-    //        gradInterpolator->SetInputImage(image_grad);
+    typename LinearInterpolatorFilterType::Pointer interpolator = LinearInterpolatorFilterType::New();
+    interpolator->SetInputImage(this->m_FixedImage);
     
+    typename LinearInterpolatorFilterType::Pointer gradInterpolator = LinearInterpolatorFilterType::New();
+    gradInterpolator->SetInputImage(m_grad);
+    
+    int counter_det_null =0;
     
     while(!US_it.IsAtEnd())
     {
-//        //cout<<"US index under consideration : "<<US_it.GetIndex()<<endl;
-//        //on ne considere le voisinage que si le centre appartient à la region blanche du mask et s'il est a l'int de l'im IRM
-//        typename TMovingImage::PointType p;
-//        //get the equivalent in physical point to evaluate whether it's within the MRI image
-//        fixedImage->TransformIndexToPhysicalPoint(US_it.GetIndex(),p);
-//        //cout<<"Physical space coordinates of center of neighbourhood : "<<p<<endl;
-//        typename TMovingImage::IndexType i;
-//        //cout<<"verification mask -US : "<<int(m_mask->GetPixel(US_it.GetIndex()))<<endl;
-        
-        //we consider the neighbourhood only if it's center is in the actual US data and not outside of the MRI volume
-        if(int(mask_shrunk->GetPixel(US_it.GetIndex()))==255)
+        //        //cout<<"US index under consideration : "<<US_it.GetIndex()<<endl;
+        //        //on ne considere le voisinage que si le centre appartient à la region blanche du mask et s'il est a l'int de l'im IRM accessible
+        typename ImageType::PointType p;
+        //get the equivalent in physical point to evaluate whether it's within the MRI image
+        movingImageT->TransformIndexToPhysicalPoint(US_it.GetIndex(),p);
+        //cout<<"Physical space coordinates of center of neighbourhood : "<<p<<endl;
+        //typename ImageType::IndexType i;
+        //cout<<"verification mask -US : "<<int(m_mask->GetPixel(US_it.GetIndex()))<<endl;
+        if(m_useLiverMask)
         {
-            //cout<<"neighbourhood in real US data"<<endl;
-            // new neighborhood at each loop iteration
+            //std::cout<<"Use of liver mask to limit ROI"<<std::endl;
+            ImageType::IndexType i;
+            m_LiverMask->TransformPhysicalPointToIndex(p, i);
             
-            //indice pour remplir les matrices
-            int indice = 0;
-            
-            //MATRICES
-            //matrices pour ce voisinnage
-            VType U;
-            //on rempli la matrice de 1, tout cela sera changé apres sauf la derniere colonne qui doit être des 1
-            MType M;
-            M.Fill(1);
-            
-            //STATS
-            //statistiques sur le patch
-            double mean=0;
-            double variance=0;
-            
-            ///////////////////////////////////////////////////
-            // ITERATION ON NEIGHBORHOOD : PARAM COMPUTATION
-            /////////////////////////////////////////////////
-            
-            //define neighbourhood
-            //here we define it as a region around the current pixel
-            typename TMovingImage::RegionType neighbourhood;
-            typename TMovingImage::RegionType::IndexType start;
-            //le debut de la region = le premier indice du masque
-            start = US_it.GetIndex();
-            //le vrai debut est 3 pixel plus haut, plus a gauche et plus en profondeur
-            start[0]= start[0]-3;
-            start[1]= start[1]-3;
-            start[2]= start[2]-3;
-            
-            //7-by-7 cube
-            typename TMovingImage::RegionType::SizeType sizeN;
-            sizeN[0] = 7;
-            sizeN[1] = 7;
-            sizeN[2] = 7;
-            
-            neighbourhood.SetIndex(start);
-            neighbourhood.SetSize(sizeN);
-            
-            ImageConstIteratorType it(movingImageT,neighbourhood);
-            
-            it.GoToBegin();
-            
-            //parcours du voisinnage;
-            
-            //NEIGHBORHOOD ITERATION
-            while (!it.IsAtEnd())
+            //we consider the neighbourhood only if it's center is in the actual US data and inside the liver mask
+            if(int(mask_shrunk->GetPixel(US_it.GetIndex()))==255 && int(m_LiverMask->GetPixel(i))==1)// && m_accessibleMRI->TransformPhysicalPointToIndex(p, i))
             {
+                //cout<<"neighbourhood in real IRM mask data"<<endl;
+                // new neighborhood at each loop iteration
                 
-                //intensite US
-                U[indice] = it.Get();
+                //indice pour remplir les matrices
+                int indice = 0;
                 
-                //calcul de la moyenne d'intensité US sur le voisinnage, mean computation is necessary to evaluate std dev
-                mean = mean + it.Get();
+                //MATRICES
+                //matrices pour ce voisinnage
+                VType U;
+                //on rempli la matrice de 1, tout cela sera changé apres sauf la derniere colonne qui doit être des 1
+                MType M;
+                M.Fill(1);
                 
-                //on recupere le point dans l'espace correspondant pour aller le chercher dans l'IRM
-                typename TMovingImage::IndexType indexUS = it.GetIndex();
-                typename TMovingImage::PointType pt;
+                //STATS
+                //statistiques sur le patch
+                double mean=0;
+                double variance=0;
                 
-                movingImageT->TransformIndexToPhysicalPoint(indexUS, pt);
-                //pt now contains the position in physica space of the considered voxel
+                ///////////////////////////////////////////////////
+                // ITERATION ON NEIGHBORHOOD : PARAM COMPUTATION
+                /////////////////////////////////////////////////
                 
-                typename TFixedImage::IndexType indexIRM;
+                //define neighbourhood
+                //here we define it as a region around the current pixel
+                typename ImageType::RegionType neighbourhood;
+                typename ImageType::RegionType::IndexType start;
+                //le debut de la region = le premier indice du masque
+                start = US_it.GetIndex();
+                //le vrai debut est 3 pixel plus haut, plus a gauche et plus en profondeur
+                start[0]= start[0]-3;
+                start[1]= start[1]-3;
+                start[2]= start[2]-3;
                 
-                //si le point est dans l'image IRM
-                if(fixedImage->TransformPhysicalPointToIndex(pt, indexIRM))
+                //7-by-7 cube
+                typename ImageType::RegionType::SizeType sizeN;
+                sizeN[0] = 7;
+                sizeN[1] = 7;
+                sizeN[2] = 7;
+                
+                neighbourhood.SetIndex(start);
+                neighbourhood.SetSize(sizeN);
+                
+                ImageConstIteratorType it(movingImageT,neighbourhood);
+                
+                it.GoToBegin();
+                
+                //parcours du voisinnage;
+                
+                //NEIGHBORHOOD ITERATION
+                while (!it.IsAtEnd())
                 {
-                    M(indice,0) = fixedImage->GetPixel(indexIRM);
-                    //test vesselness rather than gradient
-                    //M(indice,1) = m_vesselness->GetPixel(indexIRM);
-                    M(indice,1) = m_grad->GetPixel(indexIRM);
-                    //test with linear interpolator
-                    //                        M(indice,0) = interpolator->Evaluate(pt);
-                    //                        M(indice,1) = gradInterpolator->Evaluate(pt);
+                    
+                    //intensite US
+                    U[indice] = it.Get();
+                    
+                    //calcul de la moyenne d'intensité US sur le voisinnage, mean computation is necessary to evaluate std dev
+                    mean = mean + it.Get();
+                    
+                    //on recupere le point dans l'espace correspondant pour aller le chercher dans l'IRM
+                    typename ImageType::IndexType indexUS = it.GetIndex();
+                    typename ImageType::PointType pt;
+                    
+                    movingImageT->TransformIndexToPhysicalPoint(indexUS, pt);
+                    //pt now contains the position in physica space of the considered voxel
+                    
+                    typename ImageType::IndexType indexIRM;
+                    
+                    //si le point est dans l'image IRM
+                    if(this->m_FixedImage->TransformPhysicalPointToIndex(pt, indexIRM))
+                    {
+                        //                        M(indice,0) = m_FixedImage->GetPixel(indexIRM);
+                        //
+                        //                        M(indice,1) = m_grad->GetPixel(indexIRM);
+                        
+                        //test with linear interpolator
+                        M(indice,0) = interpolator->Evaluate(pt);
+                        M(indice,1) = gradInterpolator->Evaluate(pt);
+                        
+                    }
+                    
+                    
+                    else//si on essaye de comparer a un element hors de l'image IRM
+                    {
+                        cout<<"en dehors de l'image IRM !"<<endl;
+                        //on met des 0 dans M !
+                        // Ou on discard le voisinnage ?
+                        M(indice,0) = 0;
+                        M(indice,1) = 0;
+                    }
+                    
+                    indice++;
+                    ++it;
+                }
+                
+                mean = mean/m;
+                //cout<<"moyenne : "<<mean<<endl;
+                
+                
+                M3Type MTM = M3Type::Matrix(M.GetTranspose()*M.GetVnlMatrix());
+                
+                //inversion
+                //c'est ici qu'il faut faire la gestion de det =0 !
+                
+                try {
+                    MTM = MTM.GetInverse();
+                    // c = (M^T*M)^-1 * M^T*U
+                    
+                    //MATRIX OPERATIONS
+                    //cout<<"calcul des parametres par resol matricielle"<<endl;
+                    //matrice pour recuperer les params pour ce patchs = les coefficients de le relation lineaire entre US et IRM pour ce patch
+                    PType param;
+                    //MATRICES
+                    
+                    //affichage de M et U
+                    //                cout<<"matrice M : "<<endl;
+                    //                cout<<M<<endl;
+                    //
+                    //                cout<<"Vecteur U : "<<endl;
+                    //                cout<<U<<endl;
+                    //calcul de la LCI sur ce patch
+                    param = MTM*M.GetTranspose()*U;
+                    //STD DEV COMPUTATION
+                    //calcul de la variance sur ce patch
+                    
+                    //WE COMPUTE VARIANCE AND LOCAL LC2 ONLY IF MATRIX IS NOT SINGULAR
+                    it.GoToBegin();
+                    //cout<<"calcul de la variance pour patch"<<endl;
+                    while (!it.IsAtEnd()) {
+                        variance = variance + ((it.Get()- mean)*(it.Get() - mean));
+                        ++it;
+                    }
+                    
+                    variance = variance/m;
+                    //cout<<"Variance : "<<variance<<endl;
+                    //add to sum of variance for weighted average at the end to get global lc2
+                    variancesum2+= variance;
+                    
+                    double sum = 0;
+                    
+                    ////////////
+                    //LOCAL LC2//
+                    ////////////
+                    //cout<<"calcul LCI locale"<<endl;
+                    
+                    //each pixel in neighbourhood has to be considered
+                    for (int j = 0; j<m;j++)
+                    {
+                        sum = sum +  ((U[j] - (param[0]*M(j,0) + param[1]*M(j,1) + param[2]))*(U[j] - (param[0]*M(j,0) + param[1]*M(j,1) + param[2])));
+                    }
+                    
+                    double lc2;
+                    if(variance != 0)
+                    {
+                        lc2 = 1 - (sum/(m*variance));
+                        //lc2 = sum/(m*variance); //for minimisation test
+                        
+                    }
+                    else
+                    {
+                        std::cout<<"variance on patch is null"<<std::endl;
+                        //cout<<"neighbourhood voxel center : "<<p<<endl;
+                        std::cout<<U<<std::endl;
+                        lc2 = 0;
+                        
+                    }
+                    
+                    
+                    //cout<<"lc2 locale : "<<lc2<<endl;
+                    
+                    //ajout pondere par variance pour calcul de la LC2 totale
+                    lc2varsum2 = lc2varsum2 + (lc2*variance);
+                    
+                    
+                } catch (itk::ExceptionObject &e) {
+                    std::cerr<<"Matrix det is null"<<std::endl;
+                    std::cerr<<e<<std::endl;
+                    counter_det_null++;
+                    // cerr<<"spatial position of center of neighbourhood"<<p<<endl;
+                    //std::cerr<<"matric M"<<M<<std::endl;
+                    //std::cerr<<"metrice MTM"<<MTM<<std::endl;
+                    //ici c'est pcq ce sont des patchs unifomrme qu'il y a erreur ?
+                    //param[0] = 1 ;
+                    //param[1] = 0;
+                    //param[2] = 0;
+                    
                     
                 }
                 
                 
-                else//si on essaye de comparer a un element hors de l'image IRM
+                
+                
+                
+            }
+        }
+        
+        else
+        {
+            //we consider the neighbourhood only if it's center is in the actual US data and not outside of the MRI volume
+            if(int(mask_shrunk->GetPixel(US_it.GetIndex()))==255)// && m_accessibleMRI->TransformPhysicalPointToIndex(p, i))
+            {
+                //cout<<"neighbourhood in real US data"<<endl;
+                // new neighborhood at each loop iteration
+                
+                //indice pour remplir les matrices
+                int indice = 0;
+                
+                //MATRICES
+                //matrices pour ce voisinnage
+                VType U;
+                //on rempli la matrice de 1, tout cela sera changé apres sauf la derniere colonne qui doit être des 1
+                MType M;
+                M.Fill(1);
+                
+                //STATS
+                //statistiques sur le patch
+                double mean=0;
+                double variance=0;
+                
+                ///////////////////////////////////////////////////
+                // ITERATION ON NEIGHBORHOOD : PARAM COMPUTATION
+                /////////////////////////////////////////////////
+                
+                //define neighbourhood
+                //here we define it as a region around the current pixel
+                typename ImageType::RegionType neighbourhood;
+                typename ImageType::RegionType::IndexType start;
+                //le debut de la region = le premier indice du masque
+                start = US_it.GetIndex();
+                //le vrai debut est 3 pixel plus haut, plus a gauche et plus en profondeur
+                start[0]= start[0]-3;
+                start[1]= start[1]-3;
+                start[2]= start[2]-3;
+                
+                //7-by-7 cube
+                typename ImageType::RegionType::SizeType sizeN;
+                sizeN[0] = 7;
+                sizeN[1] = 7;
+                sizeN[2] = 7;
+                
+                neighbourhood.SetIndex(start);
+                neighbourhood.SetSize(sizeN);
+                
+                ImageConstIteratorType it(movingImageT,neighbourhood);
+                
+                it.GoToBegin();
+                
+                //parcours du voisinnage;
+                
+                //NEIGHBORHOOD ITERATION
+                while (!it.IsAtEnd())
                 {
-                    //cout<<"en dehors de l'image IRM !"<<endl;
-                    //on met des 0 dans M !
-                    // Ou on discard le voisinnage ?
-                    M(indice,0) = 0;
-                    M(indice,1) = 0;
+                    
+                    //intensite US
+                    U[indice] = it.Get();
+                    
+                    //calcul de la moyenne d'intensité US sur le voisinnage, mean computation is necessary to evaluate std dev
+                    mean = mean + it.Get();
+                    
+                    //on recupere le point dans l'espace correspondant pour aller le chercher dans l'IRM
+                    typename ImageType::IndexType indexUS = it.GetIndex();
+                    typename ImageType::PointType pt;
+                    
+                    movingImageT->TransformIndexToPhysicalPoint(indexUS, pt);
+                    //pt now contains the position in physica space of the considered voxel
+                    
+                    typename ImageType::IndexType indexIRM;
+                    
+                    //si le point est dans l'image IRM
+                    if(this->m_FixedImage->TransformPhysicalPointToIndex(pt, indexIRM))
+                    {
+                        //                        M(indice,0) = m_FixedImage->GetPixel(indexIRM);
+                        //
+                        //                        M(indice,1) = m_grad->GetPixel(indexIRM);
+                        
+                        //test with linear interpolator
+                        M(indice,0) = interpolator->Evaluate(pt);
+                        M(indice,1) = gradInterpolator->Evaluate(pt);
+                        
+                    }
+                    
+                    
+                    else//si on essaye de comparer a un element hors de l'image IRM
+                    {
+                        cout<<"en dehors de l'image IRM !"<<endl;
+                        //on met des 0 dans M !
+                        // Ou on discard le voisinnage ?
+                        M(indice,0) = 0;
+                        M(indice,1) = 0;
+                    }
+                    
+                    indice++;
+                    ++it;
                 }
                 
-                indice++;
-                ++it;
-            }
-            
-            mean = mean/m;
-            //cout<<"moyenne : "<<mean<<endl;
-            
-            //STD DEV COMPUTATION
-            //calcul de la variance sur ce patch
-            it.GoToBegin();
-            //cout<<"calcul de la variance pour patch"<<endl;
-            while (!it.IsAtEnd()) {
-                variance = variance + ((it.Get()- mean)*(it.Get() - mean));
-                ++it;
-            }
-            
-            variance = variance/m;
-            //cout<<"Variance : "<<variance<<endl;
-            //add to sum of variance for weighted average at the end to get global lc2
-            variancesum2+= variance;
-            
-            //MATRIX OPERATIONS
-            //cout<<"calcul des parametres par resol matricielle"<<endl;
-            //matrice pour recuperer les params pour ce patchs = les coefficients de le relation lineaire entre US et IRM pour ce patch
-            PType param;
-            //MATRICES
-            
-            //affichage de M et U
-            //                cout<<"matrice M : "<<endl;
-            //                cout<<M<<endl;
-            //
-            //                cout<<"Vecteur U : "<<endl;
-            //                cout<<U<<endl;
-            
-            M3Type MTM = M3Type::Matrix(M.GetTranspose()*M.GetVnlMatrix());
-            
-            //inversion
-            //c'est ici qu'il faut faire la gestion de det =0 !
-            
-            try {
-                MTM = MTM.GetInverse();
-                // c = (M^T*M)^-1 * M^T*U
-                param = MTM*M.GetTranspose()*U;
-            } catch (itk::ExceptionObject &e) {
-                std::cerr<<"Matrix det is null"<<std::endl;
-                std::cerr<<e<<std::endl;
-               // cerr<<"spatial position of center of neighbourhood"<<p<<endl;
-                std::cerr<<"matric M"<<M<<std::endl;
-                std::cerr<<"metrice MTM"<<MTM<<std::endl;
-                //ici c'est pcq ce sont des patchs unifomrme qu'il y a erreur ?
-                param[0] = 1 ;
-                param[1] = 0;
-                param[2] = 0;
+                mean = mean/m;
+                //cout<<"moyenne : "<<mean<<endl;
                 
                 
-            }
-            
-            
-            
-            //calcul de la LCI sur ce patch
-            double sum = 0;
-            
-            ////////////
-            //LOCAL LC2//
-            ////////////
-            //cout<<"calcul LCI locale"<<endl;
-            
-            //each pixel in neighbourhood has to be considered
-            for (int j = 0; j<m;j++)
-            {
-                sum = sum +  ((U[j] - (param[0]*M(j,0) + param[1]*M(j,1) + param[2]))*(U[j] - (param[0]*M(j,0) + param[1]*M(j,1) + param[2])));
-            }
-            
-            double lc2;
-            if(variance != 0)
-            {
-                lc2 = 1 - (sum/(m*variance));
-                //lc2 = sum/(m*variance);
+                M3Type MTM = M3Type::Matrix(M.GetTranspose()*M.GetVnlMatrix());
+                
+                //inversion
+                //c'est ici qu'il faut faire la gestion de det =0 !
+                
+                try {
+                    MTM = MTM.GetInverse();
+                    // c = (M^T*M)^-1 * M^T*U
+                    
+                    //MATRIX OPERATIONS
+                    //cout<<"calcul des parametres par resol matricielle"<<endl;
+                    //matrice pour recuperer les params pour ce patchs = les coefficients de le relation lineaire entre US et IRM pour ce patch
+                    PType param;
+                    //MATRICES
+                    
+                    //affichage de M et U
+                    //                cout<<"matrice M : "<<endl;
+                    //                cout<<M<<endl;
+                    //
+                    //                cout<<"Vecteur U : "<<endl;
+                    //                cout<<U<<endl;
+                    //calcul de la LCI sur ce patch
+                    param = MTM*M.GetTranspose()*U;
+                    //STD DEV COMPUTATION
+                    //calcul de la variance sur ce patch
+                    
+                    //WE COMPUTE VARIANCE AND LOCAL LC2 ONLY IF MATRIX IS NOT SINGULAR
+                    it.GoToBegin();
+                    //cout<<"calcul de la variance pour patch"<<endl;
+                    while (!it.IsAtEnd()) {
+                        variance = variance + ((it.Get()- mean)*(it.Get() - mean));
+                        ++it;
+                    }
+                    
+                    variance = variance/m;
+                    //cout<<"Variance : "<<variance<<endl;
+                    //add to sum of variance for weighted average at the end to get global lc2
+                    variancesum2+= variance;
+                    
+                    double sum = 0;
+                    
+                    ////////////
+                    //LOCAL LC2//
+                    ////////////
+                    //cout<<"calcul LCI locale"<<endl;
+                    
+                    //each pixel in neighbourhood has to be considered
+                    for (int j = 0; j<m;j++)
+                    {
+                        sum = sum +  ((U[j] - (param[0]*M(j,0) + param[1]*M(j,1) + param[2]))*(U[j] - (param[0]*M(j,0) + param[1]*M(j,1) + param[2])));
+                    }
+                    
+                    double lc2;
+                    if(variance != 0)
+                    {
+                        lc2 = 1 - (sum/(m*variance));
+                        //lc2 = sum/(m*variance); //for minimisation test
+                        
+                    }
+                    else
+                    {
+                        std::cout<<"variance on patch is null"<<std::endl;
+                        //cout<<"neighbourhood voxel center : "<<p<<endl;
+                        std::cout<<U<<std::endl;
+                        lc2 = 0;
+                        
+                    }
+                    
+                    
+                    //cout<<"lc2 locale : "<<lc2<<endl;
+                    
+                    //ajout pondere par variance pour calcul de la LC2 totale
+                    lc2varsum2 = lc2varsum2 + (lc2*variance);
+                    
+                    
+                } catch (itk::ExceptionObject &e) {
+                    std::cerr<<"Matrix det is null"<<std::endl;
+                    std::cerr<<e<<std::endl;
+                    counter_det_null++;
+                    // cerr<<"spatial position of center of neighbourhood"<<p<<endl;
+                    //std::cerr<<"matric M"<<M<<std::endl;
+                    //std::cerr<<"metrice MTM"<<MTM<<std::endl;
+                    //ici c'est pcq ce sont des patchs unifomrme qu'il y a erreur ?
+                    //param[0] = 1 ;
+                    //param[1] = 0;
+                    //param[2] = 0;
+                    
+                    
+                }
+                
+                
+                
+                
                 
             }
-            else
-            {
-                std::cout<<"variance on patch is null"<<std::endl;
-                //cout<<"neighbourhood voxel center : "<<p<<endl;
-                std::cout<<U<<std::endl;
-                lc2 = 0;
-                
-            }
-            
-            
-            //cout<<"lc2 locale : "<<lc2<<endl;
-            
-            //ajout pondere par variance pour calcul de la LC2 totale
-            lc2varsum2 = lc2varsum2 + (lc2*variance);
-            
             
         }
+        
+        
         
         ++US_it;
         
@@ -1474,10 +1758,12 @@ LC2ImageToImageMetric<TFixedImage, TMovingImage>
     
     //lc2 finale = moyenne ponderee
     
+    std::cout<<"number of null patches : "<<counter_det_null<<std::endl;
+    
     
     double lc2final = lc2varsum2/variancesum2;
     std::cout<<"lc2 globale : "<<lc2final<<std::endl;
-    
+    std::cout << std::endl << std::endl;
 
  
     

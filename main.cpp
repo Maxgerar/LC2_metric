@@ -42,7 +42,6 @@
 #include "itkCastImageFilter.h"
 #include "itkCheckerBoardImageFilter.h"
 #include "itkMultiResolutionPyramidImageFilter.h"
-#include "itkLC2MVImageToImageMetric.h"
 #include "itkBsplineTransform.h"
 #include "itkAdaptiveHistogramEqualizationImageFilter.h"
 
@@ -83,7 +82,6 @@ typedef itk::AffineTransform<double,3> AffineTransformType;
 typedef itk::BSplineTransform<double,3,3> BSplineTransformType;
 typedef itk::AdaptiveHistogramEqualizationImageFilter<ImageType> HistoEqualizerType;
 
-typedef itk::LC2MVImageToImageMetric<ImageType, ImageType> LC2MVMetricType;
 
 //pour le mapping de l'image mobile registree ac tsf determinee par registration framework
 typedef itk::ResampleImageFilter<ImageType, ImageType> ResampleFilterType;
@@ -758,6 +756,7 @@ int main(int argc, const char * argv[]) {
     //metric->ComputeVesselnessImage();
     metric->SetMoving(US_shrunk);
     metric->ComputeMask();
+    if(useLiverMask) metric->setLiverMask(LiverMask);
     
     registration->SetFixedImageRegion(rescaled_IRM->GetBufferedRegion());
     
@@ -848,7 +847,7 @@ int main(int argc, const char * argv[]) {
         fichier<<"Parameters for rigid transform : "<<endl;
         fichier<<finalTsf->GetParameters()<<endl;
         fichier<<" Score for this position : "<<endl;
-        fichier<<best_score<<endl;
+        fichier<<bestValue<<endl;
         fichier.close();
     }
     

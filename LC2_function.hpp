@@ -125,57 +125,6 @@ public:
         ImageType::Pointer movedImage = TransformImage(params, 1);
         MaskType::Pointer movedMask = TransformMask(params, 1);
         
-        //cout<<"verif param : "<<params<<endl;
-        
-//        EulerTransformType::Pointer transform = EulerTransformType::New();
-//        EulerTransformType::ParametersType parameters(6);
-//        //mise a l'echelle des parametres
-//        parameters[0] = params(0)*(m_maxRot/m_radius);
-//        parameters[1] = params(1)*(m_maxRot/m_radius);
-//        parameters[2] = params(2)*(m_maxRot/m_radius);
-//        parameters[3] = params(3)*(m_maxTrans/m_radius);
-//        parameters[4] = params(4)*(m_maxTrans/m_radius);
-//        parameters[5] = params(5)*(m_maxTrans/m_radius);
-//        transform->SetParameters(parameters);
-//        std::cout<<"euler tsf parameters : "<<transform->GetParameters()<<std::endl;
-//        
-//        typename ImageType::SizeType sizeUS = m_MovingImage->GetLargestPossibleRegion().GetSize();
-//        typename ImageType::PointType origin = m_MovingImage->GetOrigin();
-//        typename ImageType::SpacingType spacing = m_MovingImage->GetSpacing();
-//        typename ImageType::PointType center;
-//        center[0] = origin[0]+spacing[0]*sizeUS[0]/2;
-//        center[1] = origin[1]+spacing[1]*sizeUS[1]/2;
-//        center[2] = origin[2]+spacing[2]*sizeUS[2]/2;
-//        
-//        
-//        EulerTransformType::ParametersType eulerFixedParameters(3);
-//        eulerFixedParameters[0] =center[0];
-//        eulerFixedParameters[1] =center[1];
-//        eulerFixedParameters[2] =center[2];
-//        
-//        transform->SetFixedParameters(eulerFixedParameters);
-//        //std::cout<<"tsf fixed param : "<<transform->GetFixedParameters()<<std::endl;
-//        
-//        
-//        
-//        typename ResamplerType::Pointer resamplefilter = ResamplerType::New();
-//        resamplefilter->SetInput(m_MovingImage);
-//        resamplefilter->SetSize(m_FixedImage->GetLargestPossibleRegion().GetSize());
-//        resamplefilter->SetOutputSpacing(m_FixedImage->GetSpacing());
-//        resamplefilter->SetOutputDirection(m_FixedImage->GetDirection());
-//        resamplefilter->SetOutputOrigin(m_FixedImage->GetOrigin());
-//        resamplefilter->SetTransform(transform);
-//        //resamplefilter->SetTransform(transform);
-//        
-//        try {
-//            resamplefilter->Update();
-//        } catch (itk::ExceptionObject &e) {
-//            std::cerr<<"error while transforming moving image"<<std::endl;
-//            std::cerr<<e<<std::endl;
-//            return EXIT_FAILURE;
-//        }
-        
-        //typename ImageType::ConstPointer movedImage = TransformImage(params, 1);
         
         //downsampling de l'image US
         
@@ -838,7 +787,7 @@ public:
     void setMaxTrans(double trans){m_maxTrans = trans;}
     void setRadius(double radius) {m_radius = radius;}
     void setMovingImage(ImageType::Pointer US){m_MovingImage =US;}
-    void setFixedImafe(ImageType::Pointer MRI){m_FixedImage=MRI;}
+    void setFixedImage(ImageType::Pointer MRI){m_FixedImage=MRI;}
     void setLiverMask(MaskType::Pointer liver);
     void setOutputPath(std::string out){m_outputPath=out;}
     
