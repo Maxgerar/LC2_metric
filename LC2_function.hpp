@@ -452,7 +452,7 @@ public:
                     
                     //inversion
                     //c'est ici qu'il faut faire la gestion de det =0 !
-                    
+                    PType param;
                     try {
                         MTM = MTM.GetInverse();
                         // c = (M^T*M)^-1 * M^T*U
@@ -460,7 +460,7 @@ public:
                         //MATRIX OPERATIONS
                         //cout<<"calcul des parametres par resol matricielle"<<endl;
                         //matrice pour recuperer les params pour ce patchs = les coefficients de le relation lineaire entre US et IRM pour ce patch
-                        PType param;
+                        
                         //MATRICES
                         
                         //affichage de M et U
@@ -531,9 +531,9 @@ public:
                         //std::cerr<<"matric M"<<M<<std::endl;
                         //std::cerr<<"metrice MTM"<<MTM<<std::endl;
                         //ici c'est pcq ce sont des patchs unifomrme qu'il y a erreur ?
-                        //param[0] = 1 ;
-                        //param[1] = 0;
-                        //param[2] = 0;
+//                        param[0] = 1 ;
+//                        param[1] = 0;
+//                        param[2] = 0;
                         
                         
                     }
