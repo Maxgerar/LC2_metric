@@ -14,6 +14,7 @@
 #include <string>
 #include <time.h>
 
+
 //ITK CLASSES
 #include "itkImage.h"
 #include "itkMatrix.h"
@@ -333,6 +334,8 @@ public:
         
         while(!US_it.IsAtEnd())
         {
+            
+            
             //        //cout<<"US index under consideration : "<<US_it.GetIndex()<<endl;
             //        //on ne considere le voisinage que si le centre appartient à la region blanche du mask et s'il est a l'int de l'im IRM accessible
                     typename ImageType::PointType p;
@@ -749,6 +752,9 @@ public:
 
             
             ++US_it;
+            ++US_it;
+            
+          
             
         }
         

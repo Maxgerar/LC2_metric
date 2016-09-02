@@ -520,7 +520,7 @@ int main(int argc, const char * argv[]) {
     LC2_function LC2 = LC2_function(rescaled_IRM,US_shrunk,outputPath);//MRI_shrunk or rescaled
     //make sure that the mask is computed on US_Shrunk but that we use the rescaled image to compute LC2
     //LC2.setMovingImage(rescaled_US);
-    LC2.setMaxRot(0.4); //0.3 for best initialisation
+    LC2.setMaxRot(0.3); //0.3 for best initialisation //0.2 et 10 pour vessel p1
     LC2.setMaxTrans(10);//10
     LC2.setRadius(radius);
     
@@ -570,6 +570,8 @@ int main(int argc, const char * argv[]) {
         fichier<<"Scaling factors rotation and translation : "<<endl;
         fichier<<"Rotation : "<<LC2.getMaxRot()<<endl;
         fichier<<"Translation : "<<LC2.getMaxTrans()<<endl;
+        fichier<<"Radius : "<< LC2.getRadius()<<endl;
+        fichier<<"Precision "<<precision<<endl;
         fichier<<"Parameters for rigid transform : "<<endl;
         fichier<<finalTsf->GetParameters()<<endl;
         fichier<<" Score for this position : "<<endl;
